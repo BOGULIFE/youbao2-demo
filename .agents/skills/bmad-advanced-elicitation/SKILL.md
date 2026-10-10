@@ -1,0 +1,25 @@
+num,category,method_name,description,output_pattern
+1,advanced,Tree of Thoughts,Explore multiple reasoning paths simultaneously then evaluate and select the best - perfect for complex problems with multiple valid approaches,paths → evaluation → selection
+2,advanced,Graph of Thoughts,Model reasoning as an interconnected network of ideas to reveal hidden relationships - ideal for systems thinking and discovering emergent patterns,nodes → connections → patterns
+3,advanced,Thread of Thought,Maintain coherent reasoning across long contexts by weaving a continuous narrative thread - essential for RAG systems and maintaining consistency,context → thread → synthesis
+4,advanced,Self-Consistency Validation,Generate multiple independent approaches then compare for consistency - crucial for high-stakes decisions where verification matters,approaches → comparison → consensus
+5,advanced,Meta-Prompting Analysis,Step back to analyze the approach structure and methodology itself - valuable for optimizing prompts and improving problem-solving,current → analysis → optimization
+6,advanced,Reasoning via Planning,Build a reasoning tree guided by world models and goal states - excellent for strategic planning and sequential decision-making,model → planning → strategy
+7,advanced,Chain-of-Thought Scaffolding,Force explicit intermediate reasoning steps before any conclusion — prevents intuitive leaps that skip flawed logic,premise → step → step → conclusion
+8,advanced,Few-Shot Exemplar Priming,Provide 2-3 worked examples of the desired reasoning pattern before the real task — aligns output format and depth through demonstration,examples → pattern recognition → application
+9,collaboration,Stakeholder Round Table,Convene multiple personas to contribute diverse perspectives - essential for requirements gathering and finding balanced solutions across competing interests,perspectives → synthesis → alignment
+10,collaboration,Expert Panel Review,Assemble domain experts for deep specialized analysis - ideal when technical depth and peer review quality are needed,expert views → consensus → recommendations
+11,collaboration,Debate Club Showdown,Two personas argue opposing positions while a moderator scores points - great for exploring controversial decisions and finding middle ground,thesis → antithesis → synthesis
+12,collaboration,User Persona Focus Group,Gather your product's user personas to react to proposals and share frustrations - essential for validating features and discovering unmet needs,reactions → concerns → priorities
+13,collaboration,Time Traveler Council,Past-you and future-you advise present-you on decisions - powerful for gaining perspective on long-term consequences vs short-term pressures,past wisdom → present choice → future impact
+14,collaboration,Cross-Functional War Room,Product manager + engineer + designer tackle a problem together - reveals trade-offs between feasibility desirability and viability,constraints → trade-offs → balanced solution
+15,collaboration,Mentor and Apprentice,Senior expert teaches junior while junior asks naive questions - surfaces hidden assumptions through teaching,explanation → questions → deeper understanding
+16,collaboration,Good Cop Bad Cop,Supportive persona and critical persona alternate - finds both strengths to build on and weaknesses to address,encouragement → criticism → balanced view
+17,collaboration,Improv Yes-And,Multiple personas build on each other's ideas without blocking - generates unexpected creative directions through collaborative building,idea → build → build → surprising result
+18,collaboration,Customer Support Theater,Angry customer and support rep roleplay to find pain points - reveals real user frustrations and service gaps,complaint → investigation → resolution → prevention
+19,collaboration,Six Thinking Hats,Rotate through six modes (facts - feelings - caution - optimism - creativity - process) to ensure a group covers every angle without crosstalk,white → red → black → yellow → green → blue
+20,collaboration,Delphi Method,Experts give independent estimates - see anonymized results - then revise — converges on calibrated group judgment while avoiding anchoring bias,independent estimates → reveal → revise → converge
+21,competitive,Red Team vs Blue Team,Adversarial attack-defend analysis to find vulnerabilities - critical for security testing and building robust solutions,defense → attack → hardening
+22,competitive,Shark Tank Pitch,Entrepreneur pitches to skeptical investors who poke holes - stress-tests business viability and forces clarity on value proposition,pitch → challenges → refinement
+23,competitive,Code Review Gauntlet,Senior devs with different philosophies review the same code - surfaces style debates and finds consensus on best practices,reviews → debates → standards
+24,core,First Principles Analysis,Strip away assumptions to rebuild from fundamental truths - bre

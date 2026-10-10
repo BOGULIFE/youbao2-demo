@@ -1,0 +1,2409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FR-005 · 订单优化 · 右豹迭代需求记录</title>
+  <style>
+    :root {
+      --primary: #2563eb; --primary-hover: #1d4ed8; --primary-light: #eff6ff; --primary-border: #bfdbfe;
+      --accent-rule: #0891b2; --accent-version: #7c3aed; --accent-fr: #d97706;
+      --success: #16a34a; --success-bg: #f0fdf4; --danger: #dc2626; --danger-bg: #fef2f2;
+      --warning: #d97706; --warning-bg: #fffbeb;
+      --surface: #fff; --surface-glass: rgba(255,255,255,0.72); --surface-hover: #f8fafc; --border: #e8edf3;
+      --text-primary: #18222f; --text-secondary: #4a5568; --text-muted: #9aa5b4;
+      --sidebar-w: 240px; --drawer-w: 560px; --radius-sm: 7px; --radius-lg: 14px;
+      --shadow: 0 8px 32px rgba(30,40,80,0.10);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 13px;
+      color: var(--text-primary);
+      background: linear-gradient(135deg, #e0e7ff 0%, #f0f4f8 40%, #e0f2fe 100%);
+      background-attachment: fixed; min-height: 100vh;
+    }
+    .sidebar {
+      position: fixed; inset: 0 auto 0 0; width: var(--sidebar-w); z-index: 200;
+      display: flex; flex-direction: column;
+      background: rgba(240,244,255,0.95); backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(148,163,196,0.22);
+    }
+    .sidebar-brand { padding: 16px 14px 12px; border-bottom: 1px solid rgba(148,163,196,0.22); }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-weight: 700;
+    }
+    .brand-text { font-size: 14px; font-weight: 700; }
+    .brand-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .sprint-pill {
+      display: inline-block; margin-top: 10px; font-size: 11px; font-weight: 600;
+      padding: 3px 8px; border-radius: 999px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;
+    }
+    .sidebar-scroll { flex: 1; overflow-y: auto; padding: 8px 0 16px; }
+    .nav-item {
+      position: relative; display: flex; align-items: center; height: 40px;
+      padding: 0 12px 0 14px; margin: 1px 8px; width: calc(100% - 16px);
+      border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-secondary);
+      text-decoration: none; transition: all 0.18s;
+    }
+    .nav-item:hover { background: rgba(99,102,241,0.06); color: var(--text-primary); }
+    .nav-item.active { color: var(--primary); background: rgba(37,99,235,0.12); font-weight: 600; }
+    .nav-item.active::before {
+      content: ''; position: absolute; left: 0; top: 7px; bottom: 7px;
+      width: 3px; border-radius: 0 2px 2px 0; background: var(--primary);
+    }
+    .sidebar-foot { padding: 10px 14px 14px; border-top: 1px solid rgba(148,163,196,0.22); font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+    .main { margin-left: var(--sidebar-w); padding: 16px 20px 40px; min-height: 100vh; }
+    .breadcrumb { padding: 4px 0 12px; font-size: 12px; color: var(--text-muted); }
+    .breadcrumb a { color: var(--primary); text-decoration: none; }
+    .page-header { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+    .page-header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+    .page-header h1 { font-size: 19px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .page-desc { font-size: 12px; color: var(--text-muted); max-width: 780px; line-height: 1.55; }
+    .badge { display: inline-flex; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: var(--radius-sm); }
+    .badge-fr { background: #fffbeb; color: var(--accent-fr); border: 1px solid #fde68a; }
+    .badge-version { background: #f5f3ff; color: var(--accent-version); border: 1px solid #ddd6fe; }
+    .page-tab-bar {
+      display: flex; gap: 0; margin-bottom: 16px;
+      background: var(--surface-glass); backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.55); border-radius: var(--radius-lg);
+      padding: 4px; box-shadow: var(--shadow); width: fit-content;
+    }
+    .page-tab-bar button {
+      padding: 8px 20px; border: none; background: transparent; cursor: pointer;
+      font-size: 13px; font-weight: 500; color: var(--text-secondary); border-radius: 10px;
+    }
+    .page-tab-bar button.active { background: var(--primary); color: #fff; font-weight: 600; }
+    .page-view { display: none; }
+    .page-view.active { display: block; }
+    .btn {
+      display: inline-flex; align-items: center; height: 34px; padding: 0 14px;
+      border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid transparent;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-rule { background: var(--primary-light); color: var(--primary); border-color: var(--primary-border); }
+    .btn-rule.active { background: var(--primary); color: #fff; }
+    .btn-ghost { background: var(--surface); color: var(--text-secondary); border-color: var(--border); }
+    .btn-ghost:hover { background: var(--surface-hover); }
+    .btn-ghost-sm { background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border); height: 32px; padding: 0 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; }
+    .btn-sm { height: 32px; padding: 0 12px; font-size: 12px; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .glass-card {
+      background: var(--surface-glass); backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.55); border-radius: var(--radius-lg);
+      box-shadow: var(--shadow); overflow: hidden;
+    }
+    .tab-bar-inline { display: flex; gap: 4px; padding: 12px 16px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .tab-bar-inline button {
+      padding: 8px 14px; border: none; background: none; cursor: pointer;
+      font-size: 13px; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px;
+    }
+    .tab-bar-inline button.active { color: var(--primary); font-weight: 600; border-bottom-color: var(--primary); }
+    .admin-panel { display: none; }
+    .admin-panel.active { display: block; }
+    .config-board { padding: 16px 18px 24px; max-width: 920px; }
+    .config-block {
+      padding: 16px 0; border-bottom: 1px solid var(--border);
+    }
+    .config-block:last-child { border-bottom: none; padding-bottom: 0; }
+    .config-block-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; align-items: flex-start; }
+    .config-block-head h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .config-block-head p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .form-inline { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 10px; }
+    .form-field { display: flex; flex-direction: column; gap: 4px; }
+    .form-field label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .form-field input, .form-field select {
+      height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; min-width: 120px;
+    }
+    .rule-note {
+      padding: 10px 12px; border-radius: var(--radius-sm); background: #eff6ff;
+      border: 1px solid var(--primary-border); font-size: 12px; color: #1e40af; line-height: 1.55; margin-bottom: 12px;
+    }
+    .config-board .rule-note { margin-top: 0; }
+    .board-footer {
+      margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .table-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
+    .table-toolbar h3 { font-size: 14px; font-weight: 700; }
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 16px; align-items: flex-end; border-bottom: 1px solid var(--border); }
+    .filter-actions { display: flex; gap: 8px; margin-left: auto; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 900px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: top; }
+    th { font-size: 11px; font-weight: 600; color: var(--text-muted); background: rgba(248,250,252,0.9); white-space: nowrap; }
+    tr:hover td { background: var(--surface-hover); }
+    .cell-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .link { color: var(--primary); cursor: pointer; background: none; border: none; padding: 0; font-size: 12px; font-weight: 500; margin-right: 10px; }
+    .link-muted { color: var(--text-muted); }
+    .link-danger { color: var(--danger); margin-right: 0; }
+    .tag { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .tag-muted { background: #f1f5f9; color: var(--text-muted); }
+    .tag-ok { background: var(--success-bg); color: var(--success); }
+    .tag-warn { background: var(--warning-bg); color: var(--warning); }
+    .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .detail-grid { display: grid; gap: 8px; margin-bottom: 16px; }
+    .detail-row {
+      display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px;
+      border-radius: var(--radius-sm); background: #f8fafc; border: 1px solid var(--border); font-size: 12px;
+    }
+    .detail-row .label { color: var(--text-muted); flex-shrink: 0; }
+    .detail-row .value { font-weight: 600; text-align: right; }
+    /* —— 宽抽屉（复杂配置表单）· 对齐 component-spec + admin-ui-spec —— */
+    .drawer.wide { width: 720px; }
+    .drawer.wide .drawer-header {
+      padding: 16px 20px; align-items: center;
+    }
+    .drawer.wide .drawer-header h2 { font-size: 15px; font-weight: 700; line-height: 1.35; }
+    .drawer.wide .drawer-header p { font-size: 12px; margin-top: 4px; line-height: 1.5; }
+    .drawer.wide .drawer-close { width: 28px; height: 28px; font-size: 16px; }
+    .drawer.wide .drawer-body { padding: 0 24px 24px; }
+    .drawer.wide .drawer-footer { padding: 14px 20px 16px; }
+
+    #strategyEditDrawer .config-board,
+    #strategyDetailDrawer .config-board { padding: 0; max-width: none; }
+    #strategyEditDrawer .drawer-field-top,
+    #strategyDetailDrawer .drawer-field-top {
+      padding: 20px 0; border-bottom: 1px solid var(--border);
+    }
+    #strategyEditDrawer .config-block,
+    #strategyDetailDrawer .config-block {
+      padding: 20px 0; border-bottom: 1px solid var(--border);
+    }
+    #strategyEditDrawer .config-block:last-child,
+    #strategyDetailDrawer .config-block:last-child { border-bottom: none; padding-bottom: 8px; }
+    #strategyEditDrawer .config-block-inline .spec-inline {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px;
+    }
+    #strategyEditDrawer .config-block-inline .spec-inline .form-field {
+      flex-direction: row; align-items: center; gap: 10px; margin-bottom: 0;
+    }
+    #strategyEditDrawer .config-block-inline .spec-inline .form-field label { white-space: nowrap; margin: 0; }
+    #strategyEditDrawer .config-block-head,
+    #strategyDetailDrawer .config-block-head {
+      display: flex; justify-content: space-between; gap: 12px;
+      margin-bottom: 12px; flex-wrap: wrap; align-items: flex-start;
+    }
+    #strategyEditDrawer .config-block-head h3,
+    #strategyDetailDrawer .config-block-head h3 {
+      font-size: 14px; font-weight: 700; margin-bottom: 4px; line-height: 1.4;
+    }
+    #strategyEditDrawer .config-block-head p,
+    #strategyDetailDrawer .config-block-head p {
+      font-size: 12px; color: var(--text-muted); line-height: 1.5;
+    }
+    #strategyEditDrawer .field-ratio-note,
+    #strategyDetailDrawer .field-ratio-note {
+      font-size: 12px; color: var(--text-secondary); line-height: 1.55;
+      padding: 10px 12px; margin-bottom: 12px;
+      background: #eff6ff; border: 1px solid var(--primary-border); border-radius: var(--radius-sm);
+    }
+    #strategyEditDrawer .form-field { gap: 6px; margin-bottom: 0; }
+    #strategyEditDrawer .form-field label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+    #strategyEditDrawer .form-input,
+    #strategyEditDrawer .form-field input[type="text"],
+    #strategyEditDrawer .form-field input[type="number"] {
+      width: 100%; height: 34px; padding: 0 10px;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 13px; color: var(--text-primary); background: #fff;
+    }
+    #strategyEditDrawer .input-narrow { width: 120px; }
+    #strategyEditDrawer .checkbox-group { gap: 16px 20px; padding: 2px 0; }
+    #strategyEditDrawer .checkbox-item { font-size: 13px; gap: 8px; }
+    #strategyEditDrawer .multi-select-trigger { height: 34px; font-size: 13px; }
+
+    #strategyEditDrawer .strategy-table,
+    #strategyDetailDrawer .strategy-table {
+      width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse;
+    }
+    #strategyEditDrawer .strategy-table th,
+    #strategyEditDrawer .strategy-table td,
+    #strategyDetailDrawer .strategy-table th,
+    #strategyDetailDrawer .strategy-table td {
+      padding: 10px 12px; font-size: 12px; text-align: left;
+      border-bottom: 1px solid var(--border); vertical-align: middle;
+    }
+    #strategyEditDrawer .strategy-table thead th,
+    #strategyDetailDrawer .strategy-table thead th {
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      background: rgba(248,250,252,0.95);
+    }
+    #strategyEditDrawer .strategy-table tbody tr:hover td { background: var(--surface-hover); }
+    #strategyEditDrawer .field-config-table col.col-field { width: 52%; }
+    #strategyEditDrawer .field-config-table col.col-ratio { width: 24%; }
+    #strategyEditDrawer .field-config-table col.col-skip { width: 24%; }
+    #strategyEditDrawer .field-cell { line-height: 1.45; }
+    #strategyEditDrawer .field-cell .field-label {
+      display: block; font-size: 12px; font-weight: 500; color: var(--text-primary);
+    }
+    #strategyEditDrawer .field-key {
+      display: block; margin-top: 2px; font-size: 11px; color: var(--text-muted);
+    }
+    #strategyEditDrawer .field-key code {
+      font-size: 11px; font-family: ui-monospace, monospace;
+      background: #f1f5f9; padding: 1px 4px; border-radius: 3px;
+    }
+    #strategyEditDrawer .field-ratio-input,
+    #strategyEditDrawer .field-skip-input,
+    #strategyEditDrawer .inline-cell-input {
+      width: 100%; max-width: 96px; height: 32px; padding: 0 8px;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 12px; background: #fff;
+    }
+    #strategyEditDrawer .inline-cell-input { max-width: none; }
+    #strategyEditDrawer .inline-cell-input.num { max-width: 96px; }
+    #strategyEditDrawer .id-ratio-table col.col-match { width: 28%; }
+    #strategyEditDrawer .id-ratio-table col.col-val { width: 36%; }
+    #strategyEditDrawer .id-ratio-table col.col-ratio { width: 24%; }
+    #strategyEditDrawer .id-ratio-table col.col-act { width: 12%; text-align: center; }
+    #strategyEditDrawer .id-ratio-table td:last-child { text-align: center; }
+    #strategyEditDrawer .btn-inline-add {
+      height: 28px; padding: 0 10px; font-size: 12px; font-weight: 500;
+      border: 1px dashed var(--primary-border); background: var(--primary-light);
+      color: var(--primary); border-radius: var(--radius-sm); cursor: pointer;
+    }
+    #strategyEditDrawer .btn-inline-add:hover { background: #dbeafe; }
+    #strategyEditDrawer .link { font-size: 12px; margin-right: 0; }
+    #strategyEditDrawer .project-checkbox-grid {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px;
+    }
+
+    #strategyDetailDrawer .detail-grid { gap: 8px; margin-bottom: 0; }
+    #strategyDetailDrawer .detail-row { padding: 10px 12px; font-size: 13px; }
+    #strategyDetailDrawer .field-key {
+      display: inline; margin-left: 6px; font-size: 11px; color: var(--text-muted);
+    }
+    #strategyDetailDrawer .field-key code {
+      font-size: 11px; font-family: ui-monospace, monospace;
+      background: #f1f5f9; padding: 1px 4px; border-radius: 3px;
+    }
+    #strategyDetailDrawer .config-block:first-child { padding-top: 16px; }
+    #strategyDetailDrawer .section-subtitle {
+      font-size: 14px; font-weight: 700; margin: 0 0 10px; line-height: 1.4;
+    }
+    #strategyDetailDrawer .field-config-table col.col-field { width: 52%; }
+    #strategyDetailDrawer .field-config-table col.col-ratio { width: 24%; }
+    #strategyDetailDrawer .field-config-table col.col-skip { width: 24%; }
+    .flow-edges line, .flow-edges polyline, .flow-edges path { stroke: #64748b; stroke-width: 2; fill: none; }
+    .flow-edges.edge-skip line, .flow-edges.edge-skip polyline, .flow-edges.edge-skip path { stroke: #dc2626; stroke-width: 2; stroke-dasharray: none; }
+    .flow-edges.edge-loop line { stroke: #64748b; stroke-width: 2; stroke-dasharray: 6 4; }
+    #strategyEditDrawer .table-wrap,
+    #strategyDetailDrawer .table-wrap { margin: 0; }
+    #strategyEditDrawer .multi-select-panel { padding: 8px 10px; max-height: 240px; }
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 16px; padding: 4px 0; }
+    .checkbox-item {
+      display: inline-flex; align-items: center; gap: 8px; font-size: 13px;
+      color: var(--text-secondary); cursor: pointer; user-select: none;
+    }
+    .checkbox-item input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+    .multi-select { position: relative; }
+    .multi-select-trigger {
+      width: 100%; height: 34px; padding: 0 10px; text-align: left;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: #fff; font-size: 13px; cursor: pointer; color: var(--text-primary);
+    }
+    .multi-select-panel {
+      display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px);
+      max-height: 240px; overflow-y: auto; z-index: 20;
+      background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      box-shadow: var(--shadow); padding: 8px 10px;
+    }
+    .multi-select-panel.open { display: block; }
+    .project-checkbox-grid { display: flex; flex-direction: column; gap: 6px; }
+    .field-ratio-input {
+      width: 72px; height: 28px; padding: 0 6px; border: 1px solid var(--border);
+      border-radius: 4px; font-size: 12px;
+    }
+    .import-hint {
+      padding: 10px 12px; background: #f8fafc; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-top: 8px;
+    }
+    .import-hint code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+    .amount-down { color: var(--danger); }
+    .amount-up { color: var(--success); }
+    .drawer-overlay, .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15,23,42,0.35); z-index: 500;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .drawer-overlay.open, .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .drawer {
+      position: fixed; top: 0; right: 0; bottom: 0; width: var(--drawer-w); z-index: 501;
+      background: rgba(255,255,255,0.98); backdrop-filter: blur(12px);
+      box-shadow: -8px 0 40px rgba(30,40,60,0.18);
+      transform: translateX(100%); transition: transform 0.28s ease;
+      display: flex; flex-direction: column;
+      pointer-events: none; visibility: hidden;
+    }
+    .drawer.open { transform: translateX(0); pointer-events: auto; visibility: visible; }
+    .drawer-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .drawer-header h2 { font-size: 14px; font-weight: 700; }
+    .drawer-header p { font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.35; }
+    .drawer-close { width: 26px; height: 26px; border: none; background: #f1f5f9; border-radius: 6px; cursor: pointer; font-size: 15px; flex-shrink: 0; }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 10px 14px 16px; }
+    .drawer-footer { padding: 10px 16px 12px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+    .compare-summary {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px;
+    }
+    .compare-summary .item {
+      padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #f8fafc;
+    }
+    .compare-summary .item .label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+    .compare-summary .item .value { font-size: 16px; font-weight: 700; }
+    .rule-tab-bar { display: flex; gap: 0; padding: 0 16px; border-bottom: 1px solid var(--border); }
+    .rule-tab-bar button {
+      padding: 10px 18px; border: none; background: none; cursor: pointer;
+      font-size: 13px; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px;
+    }
+    .rule-tab-bar button.active { color: var(--primary); font-weight: 600; border-bottom-color: var(--primary); }
+    .rule-panel { display: none; }
+    .rule-panel.active { display: block; }
+    .rule-section { margin-bottom: 22px; }
+    .rule-section h3 { font-size: 14px; font-weight: 700; color: var(--accent-rule); margin-bottom: 8px; }
+    .rule-section h3 span {
+      display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center;
+      background: #ecfeff; color: var(--accent-rule); border-radius: 6px; font-size: 12px; margin-right: 8px;
+    }
+    .rule-content { font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+    .rule-content ul, .rule-content ol { padding-left: 18px; margin-top: 6px; }
+    .rule-content li { margin-bottom: 5px; }
+    .rule-content code { font-family: ui-monospace, monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 4px; }
+    .modal {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
+      width: 440px; max-width: calc(100vw - 32px); z-index: 501;
+      background: #fff; border-radius: var(--radius-lg); box-shadow: 0 16px 48px rgba(30,40,60,0.2);
+      opacity: 0; pointer-events: none; transition: all 0.2s;
+    }
+    .modal-overlay.open .modal { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+    .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 15px; font-weight: 700; }
+    .modal-body { padding: 16px 20px; }
+    .modal-body .form-field { margin-bottom: 12px; }
+    .modal-body .form-field label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .modal-body .form-field input, .modal-body .form-field select {
+      width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px;
+    }
+    .modal-footer { padding: 12px 20px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border); }
+    .flow-page-intro { padding: 16px 18px 0; font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+    .flow-svg-wrap { overflow: auto; padding: 16px 18px 24px; max-height: 72vh; border-top: 1px solid var(--border); }
+    .flow-svg-wrap svg { display: block; margin: 0 auto; min-width: 920px; }
+    .flow-legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 0 18px 20px; font-size: 11px; color: var(--text-muted); }
+    .flow-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: -2px; }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #1e293b; color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 13px;
+      opacity: 0; transition: all 0.25s; z-index: 600; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .explain-layout {
+      display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; align-items: start;
+    }
+    @media (max-width: 900px) { .explain-layout { grid-template-columns: 1fr; } }
+    .explain-nav {
+      position: sticky; top: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px;
+    }
+    .explain-nav .nav-caption {
+      font-size: 11px; font-weight: 600; color: var(--text-muted); padding: 4px 10px 8px;
+    }
+    .explain-nav button {
+      text-align: left; border: none; background: transparent; cursor: pointer;
+      padding: 9px 12px; border-radius: 8px; font-size: 13px; color: var(--text-secondary); line-height: 1.35;
+    }
+    .explain-nav button small { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; font-weight: 400; }
+    .explain-nav button.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+    .explain-nav button.active small { color: #3b82f6; }
+    .explain-panel { display: none; padding: 20px 22px 28px; }
+    .explain-panel.active { display: block; }
+    .explain-hero {
+      padding: 16px 18px; border-radius: var(--radius-sm); margin-bottom: 18px;
+      background: linear-gradient(135deg, #eff6ff, #ecfeff); border: 1px solid #bfdbfe;
+    }
+    .explain-hero h2 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .explain-hero p { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+    .explain-kicker { font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--primary); margin-bottom: 6px; }
+    .explain-section { margin-bottom: 22px; }
+    .explain-section:last-child { margin-bottom: 0; }
+    .explain-section h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+    .explain-section p, .explain-section li { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+    .explain-section code, .explain-hero code {
+      font-family: ui-monospace, monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 4px;
+    }
+    .explain-section ul, .explain-section ol { padding-left: 18px; }
+    .explain-section li { margin-bottom: 6px; }
+    .explain-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    @media (max-width: 720px) { .explain-grid { grid-template-columns: 1fr; } }
+    .explain-card {
+      background: rgba(248,250,252,.9); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px 14px 12px;
+    }
+    .explain-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .explain-card p, .explain-card li { font-size: 12px; color: var(--text-secondary); line-height: 1.65; }
+    .explain-card ul { padding-left: 16px; }
+    .explain-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 0; }
+    .explain-table th, .explain-table td {
+      padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; line-height: 1.55;
+    }
+    .explain-table th { font-size: 11px; color: var(--text-muted); background: rgba(248,250,252,.9); white-space: nowrap; }
+    .explain-table td strong { color: var(--text-primary); }
+    .callout {
+      margin: 12px 0 0; padding: 10px 12px; border-radius: var(--radius-sm);
+      font-size: 12px; line-height: 1.65; color: var(--text-secondary);
+    }
+    .callout.warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+    .callout.ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+    .callout.info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+    .callout.danger { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+    .faq-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .faq-a { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+    .step-list { counter-reset: step; list-style: none; padding-left: 0; }
+    .step-list li { position: relative; padding-left: 36px; margin-bottom: 12px; }
+    .step-list li::before {
+      counter-increment: step; content: counter(step);
+      position: absolute; left: 0; top: 1px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--primary-light); color: var(--primary);
+      font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    }
+  </style>
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand">
+        <div class="brand-icon">迭</div>
+        <div>
+          <div class="brand-text">右豹迭代需求记录</div>
+          <div class="brand-sub">PRD Demo · 产品交付研发</div>
+        </div>
+      </div>
+      <span class="sprint-pill">YBDD2.0 · 迭代 v1</span>
+    </div>
+    <div class="sidebar-scroll" data-iteration-sidebar></div>
+    <div class="sidebar-foot">FR-005 · 页内 Tab<br />业务解释 / 管理后台 / 业务流程</div>
+  </aside>
+
+  <main class="main">
+    <nav class="breadcrumb">
+      <a href="framework-shell.html">Sprint 概览</a>
+      <span> / 项目管理 / 订单优化</span>
+    </nav>
+
+    <header class="page-header">
+      <div>
+        <h1>
+          订单优化
+          <span class="badge badge-fr">FR-005</span>
+          <span class="badge badge-version">v1 当前</span>
+        </h1>
+        <p class="page-desc">纯管理后台能力：导入合作方原始订单 → 按项目已启用的<strong>共存策略</strong>批量优化 → 生成优化记录与可下载 Excel。<strong>无 C 端呈现</strong>；优化结果供内部结算/下发使用，原始数据保留对账。</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-rule" id="toggleRuleDrawer" type="button">📋 需求规则</button>
+      </div>
+    </header>
+
+    <div class="page-tab-bar" role="tablist">
+      <button type="button" data-page="view-explain" role="tab">业务解释</button>
+      <button type="button" class="active" data-page="view-admin" role="tab">管理后台</button>
+      <button type="button" data-page="view-flow" role="tab">业务流程</button>
+    </div>
+
+    <!-- 业务解释 · 运营手册 -->
+    <div id="view-explain" class="page-view">
+      <div class="explain-layout">
+        <nav class="glass-card explain-nav" aria-label="业务解释章节">
+          <div class="nav-caption">运营手册 · 按章阅读</div>
+          <button type="button" class="active" data-explain="exp-overview">1 一句话看懂<small>这是什么、谁在用</small></button>
+          <button type="button" data-explain="exp-strategy">2 策略怎么配<small>各项共存，不是互斥</small></button>
+          <button type="button" data-explain="exp-check">3 校验怎么走<small>整单 ①②③，字段 ④⑤</small></button>
+          <button type="button" data-explain="exp-admin">4 后台怎么查<small>四张表与对账路径</small></button>
+          <button type="button" data-explain="exp-faq">5 对账怎么回<small>常见问法与口径</small></button>
+        </nav>
+        <div class="glass-card">
+          <section id="exp-overview" class="explain-panel active">
+            <div class="explain-kicker">FR-005 · 订单优化</div>
+            <div class="explain-hero">
+              <h2>把合作方原始订单，按策略改结算字段，再导出给内部用</h2>
+              <p>运营导入原始 Excel，选一条策略，系统按策略改拉新量、拉旧量、会员量等结算字段，生成一条优化记录，并给出可下载的优化后 Excel。<strong>没有 C 端页面</strong>。用户看不到「被优化过」。原始单留下对账，优化单给内部结算 / 下发。</p>
+            </div>
+            <div class="explain-section">
+              <h3>30 秒故事</h3>
+              <ol class="step-list">
+                <li>先配策略：选优化项目、各结算字段比例、要不要走白名单、Top N、书籍 / 短剧 ID 专属比例。</li>
+                <li>白名单单独维护：用户白名单全局生效；关键词白名单可限定所属项目。</li>
+                <li>导入时选策略 + 项目，系统按 ①→⑤ 跑完这一批。</li>
+                <li>看优化记录：优化前 / 后订单量与累计金额；可下载、可逐单对比、可删除。</li>
+              </ol>
+            </div>
+            <div class="explain-section">
+              <h3>谁在用</h3>
+              <div class="explain-grid">
+                <div class="explain-card">
+                  <h4>结算 / 运营（后台）</h4>
+                  <p>配策略、维护白名单、导入批次、下载优化后 Excel、用对比抽屉核对某一单为什么没变或为什么变了。</p>
+                </div>
+                <div class="explain-card">
+                  <h4>系统（自动）</h4>
+                  <p>导入当下按所选策略跑完。不需要再点「确认优化」。同一批次里每笔订单独立走校验链。</p>
+                </div>
+                <div class="explain-card">
+                  <h4>C 端用户</h4>
+                  <p>不是本需求的使用者。<strong>没有任何前端入口</strong>，也不展示「优化」标签。</p>
+                </div>
+                <div class="explain-card">
+                  <h4>对账同事</h4>
+                  <p>以原始订单为底。优化记录上的「优化前」对原始，「优化后」对导出文件。两套数都要留。</p>
+                </div>
+              </div>
+              <div class="callout info">对外口径：这是内部改结算字段的批次工具，不是改用户钱包、也不是给用户看的订单页。</div>
+            </div>
+          </section>
+
+          <section id="exp-strategy" class="explain-panel">
+            <div class="explain-kicker">核心规则 · 必须讲清楚</div>
+            <div class="explain-hero">
+              <h2>一条策略里的配置同时生效，不是五选一</h2>
+              <p>编辑抽屉副标题写的是「各配置项共存生效，非互斥」。勾了用户白名单，不等于关掉字段比例；配了 Top N，也不等于 ID 专属比例失效。真正决定某一单命运的，是校验顺序，不是「只开了哪一项」。</p>
+            </div>
+            <div class="explain-section">
+              <h3>抽屉里六块分别管什么</h3>
+              <div class="table-wrap">
+                <table class="explain-table">
+                  <thead>
+                    <tr><th>配置</th><th>作用</th><th>关掉 / 空着会怎样</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>策略名称</strong></td>
+                      <td>给人认的名字，导入时按名称选</td>
+                      <td>必填</td>
+                    </tr>
+                    <tr>
+                      <td><strong>优化项目</strong></td>
+                      <td>多选。这条策略只对选中项目生效；未选时结算字段表是空态</td>
+                      <td>不选项目就配不了字段表</td>
+                    </tr>
+                    <tr>
+                      <td><strong>结算字段比例 · 豁免权值</strong></td>
+                      <td>9 个结算字段各有比例；豁免权值留空=该字段不走 ④</td>
+                      <td>未配豁免权值的字段直接进 ⑤</td>
+                    </tr>
+                    <tr>
+                      <td><strong>白名单隔离</strong></td>
+                      <td>勾「用户」才走用户白名单；勾「关键词」才走关键词白名单</td>
+                      <td>名单里有人但策略没勾，<strong>不会豁免</strong></td>
+                    </tr>
+                    <tr>
+                      <td><strong>前几名不优化</strong></td>
+                      <td>在没被 ①② 整单豁免的池子里，按收益降序取 Top N，整单原样</td>
+                      <td><code>0</code> = 关，不做 Top N</td>
+                    </tr>
+                    <tr>
+                      <td><strong>书籍 / 短剧 ID 比例</strong></td>
+                      <td>命中 ID 用专属比例（可以 &gt;100%）；未命中用该字段的结算比例</td>
+                      <td>没有规则时，全部走结算字段比例</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="callout warn">白名单表是全局维护的，策略只决定「这次跑要不要用」。名单启用 + 策略勾选，两边同时满足才整单原样。</div>
+            </div>
+          </section>
+
+          <section id="exp-check" class="explain-panel">
+            <div class="explain-kicker">对账口径 · 最容易说错</div>
+            <div class="explain-hero">
+              <h2>先整单判定，命中就停；过了才逐字段改</h2>
+              <p>①→②→③ 是整单级：命中立刻跳过后面所有整单校验，这一单原样写出。通过整单后才进 ④→⑤。④ 只豁免<strong>当前字段</strong>，别的字段继续算。计算用 <code>floor(原始值 × 比例%)</code>，每个字段自己截断，互不挪用。</p>
+            </div>
+            <div class="explain-section">
+              <div class="table-wrap">
+                <table class="explain-table">
+                  <thead>
+                    <tr><th>步</th><th>判定</th><th>命中结果</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>① 用户白名单</strong></td>
+                      <td>策略勾了「用户」，且用户 ID 在<strong>启用</strong>名单里</td>
+                      <td>整单原样，不再看 ②③④⑤</td>
+                    </tr>
+                    <tr>
+                      <td><strong>② 关键词白名单</strong></td>
+                      <td>策略勾了「关键词」，且订单关键词命中该项目（或「全部项目」）下的启用词</td>
+                      <td>整单原样，不再看 ③④⑤</td>
+                    </tr>
+                    <tr>
+                      <td><strong>③ 前几名 Top N</strong></td>
+                      <td>在<strong>没被 ①② 豁免</strong>的订单池里按收益降序取前 N</td>
+                      <td>整单原样。白名单单不占名次</td>
+                    </tr>
+                    <tr>
+                      <td><strong>④ 特定单量</strong></td>
+                      <td>该字段配了豁免权值，且原值刚好等于这个数</td>
+                      <td>仅该字段原样；其他字段继续 ④/⑤</td>
+                    </tr>
+                    <tr>
+                      <td><strong>⑤ 比例</strong></td>
+                      <td>书籍 ID / 短剧 ID 命中 → 专属比例；否则用该字段结算比例</td>
+                      <td><code>floor(原值 × 比例%)</code>，字段独立取整</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="callout ok">Top N 在批次开始时预排一次，不是每单现场重排。N=0 整步跳过。批次里每单跑完后，有下一单就回到 ①。</div>
+            </div>
+            <div class="explain-section">
+              <h3>一张单上可能同时出现两种结果</h3>
+              <ul>
+                <li>拉新量原值 = 豁免权值 5 → 拉新量保持 5（④）。</li>
+                <li>同一单会员量没命中豁免 → 按比例截断（⑤）。</li>
+                <li>对比抽屉的「说明」会把字段豁免和所用比例写在一起。</li>
+              </ul>
+              <div class="callout info">优化前 / 后「订单量」通常一样：优化改的是结算字段值，不是删单。累计金额按各结算字段加总，所以金额会变、笔数可以不变。</div>
+            </div>
+          </section>
+
+          <section id="exp-admin" class="explain-panel">
+            <div class="explain-kicker">管理后台 · 四张表</div>
+            <div class="explain-hero">
+              <h2>策略决定怎么算，名单决定谁免，记录留下这一批的结果</h2>
+              <p>页内四个后台 Tab 各管一块。改策略不会自动重跑历史批次；要按新策略再算，必须重新导入。</p>
+            </div>
+            <div class="explain-section">
+              <div class="table-wrap">
+                <table class="explain-table">
+                  <thead>
+                    <tr><th>Tab</th><th>看什么</th><th>能做什么</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>优化策略</strong></td>
+                      <td>名称、绑定项目、白名单隔离、Top N、ID 规则数、字段豁免数</td>
+                      <td>新增（先起名再进编辑抽屉）、查看详情、编辑</td>
+                    </tr>
+                    <tr>
+                      <td><strong>用户白名单</strong></td>
+                      <td>用户 ID、状态、添加时间。<strong>没有所属项目</strong></td>
+                      <td>新增 / 编辑 / 删除 / 批量导入。禁用=不参与 ①</td>
+                    </tr>
+                    <tr>
+                      <td><strong>关键词白名单</strong></td>
+                      <td>所属项目、关键词、状态、添加时间</td>
+                      <td>同上。项目可写「全部项目」；匹配按包含判断</td>
+                    </tr>
+                    <tr>
+                      <td><strong>优化记录</strong></td>
+                      <td>项目、所用策略、优化前 / 后订单量与累计金额、优化时间</td>
+                      <td>导入并优化、下载优化后 Excel、查看对比、删除（需确认）</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="callout warn">详情用抽屉、编辑用抽屉、删除用确认弹窗。对比抽屉逐单看原始 vs 优化，并带说明（白名单 / Top N / 豁免权值 / 所用比例）。</div>
+            </div>
+          </section>
+
+          <section id="exp-faq" class="explain-panel">
+            <div class="explain-kicker">内部对账话术</div>
+            <div class="explain-hero">
+              <h2>先问：这一单该不该整单原样，还是某个字段不该动</h2>
+              <p>本需求没有用户端页面。外面的人问「我的订单被改了」时，先说明用户看不见优化结果；内部对账按下表回。</p>
+            </div>
+            <div class="explain-section">
+              <div class="faq-item">
+                <div class="faq-q">Q1. 用户在白名单里，为什么这一单还是被改了？</div>
+                <div class="faq-a">查三件事：名单状态是不是「启用」；策略有没有勾「用户」白名单隔离；导入时选的是不是这条策略。名单在、策略没勾，不会豁免。</div>
+              </div>
+              <div class="faq-item">
+                <div class="faq-q">Q2. 关键词明明在名单里，为什么没免？</div>
+                <div class="faq-a">策略要勾「关键词」。词要启用，且所属项目对得上本次导入项目（或「全部项目」）。匹配是包含关系：订单词里出现名单词才算。</div>
+              </div>
+              <div class="faq-item">
+                <div class="faq-q">Q3. 收益最高的那单为什么没进 Top N？</div>
+                <div class="faq-a">Top N 只在没被 ①② 整单豁免的池子里排名。白名单单不占名次。再确认策略的 N 不是 0，以及比的是收益降序，不是结算字段合计。</div>
+              </div>
+              <div class="faq-item">
+                <div class="faq-q">Q4. 拉新量没变，会员量变了，是不是算错了？</div>
+                <div class="faq-a">不是。④ 是字段级：拉新量原值等于豁免权值就只保住这一列，其他字段照常走 ⑤。</div>
+              </div>
+              <div class="faq-item">
+                <div class="faq-q">Q5. 书籍 ID 配了 120%，为什么有的字段还是按 80%？</div>
+                <div class="faq-a">先看该字段有没有命中 ④。命中豁免权值就原样，不再用 120%。没命中 ④ 时，整单命中 ID 的字段才共用这条专属比例。</div>
+              </div>
+              <div class="faq-item">
+                <div class="faq-q">Q6. 优化前后订单量一样，金额却少了？</div>
+                <div class="faq-a">正常。优化不删单，改的是结算字段；订单量按笔数，累计金额按字段加总。对比抽屉看每一单的字段差额。</div>
+              </div>
+              <div class="faq-item">
+                <div class="faq-q">Q7. 改完策略，历史记录会重算吗？</div>
+                <div class="faq-a">不会。已生成的优化记录冻结当时结果。要按新策略出数，重新导入一批。</div>
+              </div>
+              <div class="faq-item">
+                <div class="faq-q">Q8. 原始 Excel 还能不能找到？</div>
+                <div class="faq-a">原始单要留着对账。本需求交付的是优化后 Excel；不要用优化文件覆盖原始文件。</div>
+              </div>
+            </div>
+            <div class="explain-section">
+              <h3>对外不要承诺的事</h3>
+              <ul>
+                <li>没有 C 端「我的订单被优化」页面或标签。</li>
+                <li>改策略不会自动重跑旧批次。</li>
+                <li>白名单本身不会生效，必须策略勾选对应隔离项。</li>
+                <li>④ 不会整单豁免；只有 ①②③ 才会整单原样。</li>
+              </ul>
+              <div class="callout warn">流程图在页内「业务流程」Tab。和同事对口径以本手册 + 右上角需求规则抽屉为准。</div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- 管理后台 -->
+    <div id="view-admin" class="page-view active">
+      <div class="glass-card">
+        <div class="tab-bar-inline" role="tablist" id="adminSubTabs">
+          <button type="button" class="active" data-panel="panel-strategies">优化策略</button>
+          <button type="button" data-panel="panel-wl-user">用户白名单</button>
+          <button type="button" data-panel="panel-wl-keyword">关键词白名单</button>
+          <button type="button" data-panel="panel-records">优化记录</button>
+        </div>
+
+        <!-- 优化策略列表 -->
+        <div id="panel-strategies" class="admin-panel active">
+          <div class="table-toolbar">
+            <div>
+              <h3>优化策略</h3>
+              <p class="cell-sub" style="margin-top:4px;">每条策略绑定<strong>优化项目</strong>（多选）与<strong>结算字段比例</strong>，并含 ID 差异化比例、前几名豁免、字段级豁免等配置，<strong>共存生效</strong>。</p>
+            </div>
+            <button class="btn btn-primary btn-sm" type="button" onclick="openNewStrategyModal()">新增策略</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>策略名称</th>
+                  <th>优化项目</th>
+                  <th>白名单隔离</th>
+                  <th>前几名豁免</th>
+                  <th>ID 规则数</th>
+                  <th>字段豁免数</th>
+                  <th>更新时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="strategyListBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 用户白名单（独立 Tab，无所属项目） -->
+        <div id="panel-wl-user" class="admin-panel">
+          <div class="table-toolbar">
+            <div>
+              <h3>用户白名单</h3>
+              <p class="cell-sub" style="margin-top:4px;">启用状态下，名单内用户 ID 的订单整单不优化（全局生效，不区分项目）。</p>
+            </div>
+            <div class="toolbar-actions">
+              <button class="btn btn-ghost btn-sm" type="button" onclick="openWlImportModal('user')">批量导入</button>
+              <button class="btn btn-primary btn-sm" type="button" onclick="openUserWhitelistModal()">新增</button>
+            </div>
+          </div>
+          <div class="filter-bar">
+            <div class="form-field"><label>用户 ID</label><input type="text" id="filterUserId" placeholder="U-10086" /></div>
+            <div class="form-field">
+              <label>状态</label>
+              <select id="filterUserStatus"><option value="">全部</option><option value="enabled">启用</option><option value="disabled">禁用</option></select>
+            </div>
+            <div class="filter-actions">
+              <button class="btn-ghost-sm" type="button" onclick="resetUserWhitelistFilter()">重置</button>
+              <button class="btn btn-primary btn-sm" type="button" onclick="renderUserWhitelistTable()">查询</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>用户 ID</th><th>状态</th><th>添加时间</th><th>操作</th></tr>
+              </thead>
+              <tbody id="userWhitelistBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 关键词白名单（独立 Tab） -->
+        <div id="panel-wl-keyword" class="admin-panel">
+          <div class="table-toolbar">
+            <div>
+              <h3>关键词白名单</h3>
+              <p class="cell-sub" style="margin-top:4px;">启用状态下，订单关键词命中名单时整单不优化；可按所属项目限定生效范围。</p>
+            </div>
+            <div class="toolbar-actions">
+              <button class="btn btn-ghost btn-sm" type="button" onclick="openWlImportModal('keyword')">批量导入</button>
+              <button class="btn btn-primary btn-sm" type="button" onclick="openKeywordWhitelistModal()">新增</button>
+            </div>
+          </div>
+          <div class="filter-bar">
+            <div class="form-field"><label>所属项目</label><input type="text" id="filterKwProject" placeholder="番茄小说" /></div>
+            <div class="form-field"><label>关键词</label><input type="text" id="filterKeyword" placeholder="免优化词" /></div>
+            <div class="form-field">
+              <label>状态</label>
+              <select id="filterKwStatus"><option value="">全部</option><option value="enabled">启用</option><option value="disabled">禁用</option></select>
+            </div>
+            <div class="filter-actions">
+              <button class="btn-ghost-sm" type="button" onclick="resetKeywordWhitelistFilter()">重置</button>
+              <button class="btn btn-primary btn-sm" type="button" onclick="renderKeywordWhitelistTable()">查询</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>所属项目</th><th>关键词</th><th>状态</th><th>添加时间</th><th>操作</th></tr>
+              </thead>
+              <tbody id="keywordWhitelistBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 优化记录 -->
+        <div id="panel-records" class="admin-panel">
+          <div class="table-toolbar">
+            <div>
+              <h3>优化记录</h3>
+              <p class="cell-sub" style="margin-top:4px;">导入原始订单 Excel 并选择优化策略，系统按策略输出优化后数据并生成记录。</p>
+            </div>
+            <button class="btn btn-primary btn-sm" type="button" onclick="openImportModal()">导入原始数据并优化</button>
+          </div>
+          <div class="filter-bar">
+            <div class="form-field"><label>项目名称</label><input type="text" id="filterProject" placeholder="番茄小说" /></div>
+            <div class="filter-actions">
+              <button class="btn-ghost-sm" type="button" onclick="document.getElementById('filterProject').value='';renderRecordsTable()">重置</button>
+              <button class="btn btn-primary btn-sm" type="button" onclick="renderRecordsTable()">查询</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>项目名称</th>
+                  <th>选择优化策略</th>
+                  <th>优化前订单量</th>
+                  <th>优化后订单量</th>
+                  <th>优化前累计金额</th>
+                  <th>优化后累计金额</th>
+                  <th>优化时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="recordsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 业务流程 -->
+    <div id="view-flow" class="page-view">
+      <div class="glass-card">
+        <p class="flow-page-intro">导入原始订单 → 加载策略与白名单 → 批次预排 Top N → 逐单校验（①→⑤）→ 单订单完成 → 有下一单则回到 ①，全部完成后批次汇总写入优化记录。无 C 端展示。</p>
+        <div class="flow-svg-wrap">
+          <svg width="980" height="760" viewBox="0 0 980 760" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="flow-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#64748b"/>
+              </marker>
+              <marker id="flow-arrow-skip" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#dc2626"/>
+              </marker>
+            </defs>
+
+            <!-- 主流程 -->
+            <g class="flow-edges" marker-end="url(#flow-arrow)">
+              <line x1="480" y1="52" x2="480" y2="62"/>
+              <line x1="480" y1="110" x2="480" y2="120"/>
+              <line x1="480" y1="172" x2="480" y2="182"/>
+              <line x1="480" y1="206" x2="480" y2="220"/>
+              <line x1="480" y1="260" x2="480" y2="300"/>
+              <line x1="480" y1="340" x2="480" y2="380"/>
+              <line x1="480" y1="420" x2="480" y2="434"/>
+              <line x1="480" y1="526" x2="480" y2="534"/>
+              <line x1="480" y1="572" x2="480" y2="588"/>
+              <line x1="480" y1="632" x2="480" y2="652"/>
+              <line x1="480" y1="692" x2="480" y2="706"/>
+              <line x1="480" y1="742" x2="480" y2="748"/>
+            </g>
+
+            <!-- 逐单循环回指（左侧通道，不与旁路重叠） -->
+            <g class="flow-edges edge-loop" marker-end="url(#flow-arrow)">
+              <line x1="448" y1="610" x2="130" y2="610"/>
+              <line x1="130" y1="610" x2="130" y2="240"/>
+              <line x1="130" y1="240" x2="438" y2="240"/>
+            </g>
+
+            <!-- 整单豁免旁路（①②③） -->
+            <g class="flow-edges edge-skip" marker-end="url(#flow-arrow-skip)">
+              <line x1="520" y1="240" x2="870" y2="240"/>
+              <line x1="520" y1="320" x2="870" y2="320"/>
+              <line x1="520" y1="400" x2="870" y2="400"/>
+              <line x1="870" y1="240" x2="870" y2="400"/>
+              <line x1="870" y1="400" x2="870" y2="412"/>
+              <line x1="870" y1="456" x2="870" y2="582"/>
+              <line x1="870" y1="582" x2="480" y2="582"/>
+            </g>
+
+            <g font-family="Inter, PingFang SC, sans-serif">
+              <rect x="340" y="16" width="280" height="36" rx="8" fill="#f0fdf4" stroke="#16a34a"/>
+              <text x="480" y="39" text-anchor="middle" font-size="12" font-weight="600" fill="#18222f">导入原始订单 Excel</text>
+
+              <rect x="300" y="62" width="360" height="48" rx="8" fill="#eff6ff" stroke="#2563eb"/>
+              <text x="480" y="82" text-anchor="middle" font-size="12" font-weight="600" fill="#18222f">加载策略 + 白名单</text>
+              <text x="480" y="98" text-anchor="middle" font-size="10" fill="#64748b">优化项目 · 结算字段比例/豁免权值 · ID 规则 · Top N</text>
+
+              <rect x="280" y="120" width="400" height="52" rx="8" fill="#eff6ff" stroke="#2563eb"/>
+              <text x="480" y="140" text-anchor="middle" font-size="12" font-weight="600" fill="#18222f">批次 Top N 预排名（一次）</text>
+              <text x="480" y="156" text-anchor="middle" font-size="10" fill="#64748b">在未被 ①② 整单豁免的订单池内按收益降序取 Top N · N=0 跳过</text>
+
+              <rect x="360" y="182" width="240" height="24" rx="6" fill="#f8fafc" stroke="#94a3b8"/>
+              <text x="480" y="198" text-anchor="middle" font-size="11" fill="#475569">逐单循环 · 每笔订单独立走下列校验链</text>
+
+              <polygon points="480,220 520,240 480,260 440,240" fill="#fffbeb" stroke="#d97706"/>
+              <text x="480" y="236" text-anchor="middle" font-size="10" font-weight="600" fill="#18222f">① 用户白名单</text>
+              <text x="480" y="252" text-anchor="middle" font-size="9" fill="#64748b">否 ↓ · 策略须勾选「用户」</text>
+              <text x="528" y="238" font-size="9" fill="#dc2626" font-weight="600">是 →</text>
+              <text x="118" y="244" font-size="9" fill="#64748b">← 下一单</text>
+
+              <polygon points="480,300 520,320 480,340 440,320" fill="#fffbeb" stroke="#d97706"/>
+              <text x="480" y="316" text-anchor="middle" font-size="10" font-weight="600" fill="#18222f">② 关键词白名单</text>
+              <text x="480" y="332" text-anchor="middle" font-size="9" fill="#64748b">否 ↓ · 策略须勾选「关键词」</text>
+              <text x="528" y="318" font-size="9" fill="#dc2626" font-weight="600">是 →</text>
+
+              <polygon points="480,380 520,400 480,420 440,400" fill="#fffbeb" stroke="#d97706"/>
+              <text x="480" y="396" text-anchor="middle" font-size="10" font-weight="600" fill="#18222f">③ 前几名 Top N</text>
+              <text x="480" y="412" text-anchor="middle" font-size="9" fill="#64748b">否 ↓ · 命中预排名集合</text>
+              <text x="528" y="398" font-size="9" fill="#dc2626" font-weight="600">是 →</text>
+
+              <rect x="790" y="412" width="160" height="44" rx="8" fill="#fef2f2" stroke="#dc2626"/>
+              <text x="870" y="432" text-anchor="middle" font-size="11" font-weight="600" fill="#18222f">整单原样</text>
+              <text x="870" y="448" text-anchor="middle" font-size="9" fill="#64748b">① / ② / ③ 命中</text>
+
+              <rect x="250" y="434" width="460" height="92" rx="8" fill="#f0fdf4" stroke="#16a34a"/>
+              <text x="480" y="454" text-anchor="middle" font-size="11" font-weight="600" fill="#18222f">逐字段处理（④ → ⑤，字段互不影响）</text>
+              <text x="480" y="472" text-anchor="middle" font-size="10" fill="#18222f">④ 特定单量：配置了豁免权值且原值=豁免权值 → 仅该字段原样</text>
+              <text x="480" y="488" text-anchor="middle" font-size="10" fill="#18222f">⑤ 否则：书籍ID/短剧ID 命中 → 专属比例；未命中 → 结算字段比例</text>
+              <text x="480" y="504" text-anchor="middle" font-size="9" fill="#64748b">计算 floor(原值 × 比例%) · 各字段独立截断</text>
+              <text x="480" y="518" text-anchor="middle" font-size="9" fill="#64748b">未配置豁免权值的字段跳过 ④，直接进入 ⑤</text>
+
+              <rect x="350" y="534" width="260" height="38" rx="8" fill="#f0fdf4" stroke="#16a34a"/>
+              <text x="480" y="551" text-anchor="middle" font-size="11" font-weight="600" fill="#18222f">该单结果写入</text>
+              <text x="480" y="565" text-anchor="middle" font-size="9" fill="#64748b">整单原样 或 部分/全部字段优化</text>
+
+              <circle cx="480" cy="582" r="4" fill="#64748b"/>
+
+              <polygon points="480,588 510,610 480,632 450,610" fill="#fffbeb" stroke="#d97706"/>
+              <text x="480" y="606" text-anchor="middle" font-size="10" font-weight="600" fill="#18222f">还有下一单？</text>
+              <text x="480" y="620" text-anchor="middle" font-size="9" fill="#64748b">是 ← 回到 ① · 否 ↓</text>
+              <text x="418" y="606" font-size="9" fill="#64748b" font-weight="600">是</text>
+              <text x="492" y="628" font-size="9" fill="#64748b" font-weight="600">否</text>
+
+              <rect x="320" y="652" width="320" height="40" rx="8" fill="#eff6ff" stroke="#2563eb"/>
+              <text x="480" y="670" text-anchor="middle" font-size="11" font-weight="600" fill="#18222f">批次汇总 · 生成优化记录</text>
+              <text x="480" y="684" text-anchor="middle" font-size="9" fill="#64748b">优化前/后订单量与累计金额</text>
+
+              <rect x="300" y="706" width="360" height="36" rx="8" fill="#f0fdf4" stroke="#16a34a"/>
+              <text x="480" y="724" text-anchor="middle" font-size="11" font-weight="600" fill="#18222f">运营交付 · 本批次结束</text>
+              <text x="480" y="738" text-anchor="middle" font-size="9" fill="#64748b">下载优化后 Excel · 查看对比 · 无 C 端</text>
+              <circle cx="480" cy="748" r="5" fill="none" stroke="#16a34a" stroke-width="2"/>
+
+              <text x="900" y="240" font-size="9" fill="#dc2626">①</text>
+              <text x="900" y="320" font-size="9" fill="#dc2626">②</text>
+              <text x="900" y="400" font-size="9" fill="#dc2626">③</text>
+              <text x="692" y="578" font-size="9" fill="#dc2626">旁路汇合</text>
+              <text x="108" y="430" font-size="9" fill="#64748b">逐单回环</text>
+            </g>
+          </svg>
+        </div>
+        <div class="flow-legend">
+          <span><i style="background:#eff6ff;border:1px solid #2563eb"></i>批次 / 汇总</span>
+          <span><i style="background:#fffbeb;border:1px solid #d97706"></i>整单级校验 / 分支</span>
+          <span><i style="background:#f0fdf4;border:1px solid #16a34a"></i>字段级 ④⑤ / 结束</span>
+          <span><i style="background:#f8fafc;border:1px dashed #64748b"></i>逐单回环</span>
+          <span><i style="background:#fef2f2;border:1px solid #dc2626"></i>整单原样旁路</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 弹窗：策略 / 白名单 / 导入 -->
+  <div class="modal-overlay" id="newStrategyOverlay" onclick="closeNewStrategyModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">新增优化策略</div>
+      <div class="modal-body">
+        <div class="form-field"><label>策略名称 *</label><input type="text" id="newStrategyName" placeholder="如：番茄默认策略" /></div>
+        <p style="font-size:12px;color:var(--text-muted);line-height:1.55;margin-top:4px;">创建后可继续编辑优化项目、结算字段比例、ID 规则、前几名豁免等详细配置。</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" onclick="closeNewStrategyModal()">取消</button>
+        <button class="btn btn-primary" type="button" onclick="createStrategy()">创建并编辑</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modal-overlay" id="userWhitelistOverlay" onclick="closeUserWhitelistModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header" id="userWlModalTitle">新增用户白名单</div>
+      <div class="modal-body">
+        <div class="form-field"><label>用户 ID *</label><input type="text" id="wlUserId" placeholder="U-99999" /></div>
+        <div class="form-field">
+          <label>状态 *</label>
+          <select id="wlUserStatus"><option value="enabled">启用</option><option value="disabled">禁用</option></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" onclick="closeUserWhitelistModal()">取消</button>
+        <button class="btn btn-primary" type="button" onclick="saveUserWhitelist()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="keywordWhitelistOverlay" onclick="closeKeywordWhitelistModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header" id="keywordWlModalTitle">新增关键词白名单</div>
+      <div class="modal-body">
+        <div class="form-field">
+          <label>所属项目 *</label>
+          <select id="wlKwProject"></select>
+        </div>
+        <div class="form-field"><label>关键词 *</label><input type="text" id="wlKeyword" placeholder="免优化词" /></div>
+        <div class="form-field">
+          <label>状态 *</label>
+          <select id="wlKwStatus"><option value="enabled">启用</option><option value="disabled">禁用</option></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" onclick="closeKeywordWhitelistModal()">取消</button>
+        <button class="btn btn-primary" type="button" onclick="saveKeywordWhitelist()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="wlImportOverlay" onclick="closeWlImportModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header" id="wlImportTitle">批量导入白名单</div>
+      <div class="modal-body">
+        <div class="form-field">
+          <label>Excel 文件</label>
+          <input type="file" id="wlImportFile" accept=".xlsx,.xls,.csv" />
+        </div>
+        <div class="import-hint" id="wlImportHint"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" onclick="closeWlImportModal()">取消</button>
+        <button class="btn btn-primary" type="button" onclick="submitWlImport()">确认导入</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="importOverlay" onclick="closeImportModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">导入原始数据并优化</div>
+      <div class="modal-body">
+        <div class="form-field">
+          <label>选择优化策略 *</label>
+          <select id="importStrategy"></select>
+        </div>
+        <div class="form-field">
+          <label>项目名称 *</label>
+          <select id="importProject"></select>
+        </div>
+        <div class="form-field">
+          <label>原始订单 Excel</label>
+          <input type="file" accept=".xlsx,.xls,.csv" />
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);line-height:1.55;margin-top:8px;">Demo：不上传真实文件，点击确认后将使用 Mock 原始订单按所选策略生成一条优化记录。</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" onclick="closeImportModal()">取消</button>
+        <button class="btn btn-primary" type="button" onclick="runImportOptimize()">确认导入并优化</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="confirmOverlay" onclick="closeConfirmModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header" id="confirmTitle">删除确认</div>
+      <div class="modal-body"><p id="confirmDesc" style="font-size:13px;color:var(--text-secondary);line-height:1.6;"></p></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" onclick="closeConfirmModal()">取消</button>
+        <button class="btn btn-danger" type="button" id="confirmBtn">确认删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 策略详情抽屉 -->
+  <div class="drawer-overlay" id="strategyDetailOverlay" onclick="closeStrategyDetailDrawer()"></div>
+  <aside class="drawer wide" id="strategyDetailDrawer">
+    <div class="drawer-header">
+      <div>
+        <h2 id="strategyDetailTitle">策略详情</h2>
+        <p id="strategyDetailSub"></p>
+      </div>
+      <button class="drawer-close" type="button" onclick="closeStrategyDetailDrawer()">×</button>
+    </div>
+    <div class="drawer-body" id="strategyDetailBody"></div>
+    <div class="drawer-footer">
+      <button class="btn btn-ghost" type="button" onclick="closeStrategyDetailDrawer()">关闭</button>
+      <button class="btn btn-primary" type="button" id="strategyDetailEditBtn">编辑策略</button>
+    </div>
+  </aside>
+
+  <!-- 策略编辑抽屉 -->
+  <div class="drawer-overlay" id="strategyEditOverlay" onclick="closeStrategyEditDrawer()"></div>
+  <aside class="drawer wide" id="strategyEditDrawer">
+    <div class="drawer-header">
+      <div>
+        <h2 id="strategyEditTitle">编辑策略</h2>
+        <p id="strategyEditSub">各配置项共存生效，非互斥。</p>
+      </div>
+      <button class="drawer-close" type="button" onclick="closeStrategyEditDrawer()">×</button>
+    </div>
+    <div class="drawer-body">
+      <div class="config-board">
+        <div class="drawer-field-top">
+          <div class="form-field">
+            <label for="editStrategyName">策略名称 *</label>
+            <input type="text" id="editStrategyName" class="form-input" placeholder="如：番茄默认策略" />
+          </div>
+        </div>
+        <div class="config-block">
+          <div class="config-block-head"><div><h3>优化项目</h3><p>多选，仅对选中项目生效。</p></div></div>
+          <div class="multi-select" id="editOptimizeProjectsWrap">
+            <button type="button" class="multi-select-trigger" id="editProjectsTrigger" onclick="toggleProjectDropdown(event)">
+              <span id="editProjectsSummary">请选择优化项目</span>
+            </button>
+            <div class="multi-select-panel" id="editOptimizeProjectsPanel"></div>
+          </div>
+        </div>
+        <div class="config-block">
+          <div class="config-block-head"><div><h3>结算字段比例 · 特定单量豁免</h3></div></div>
+          <p class="field-ratio-note">选中优化项目后展示全部 9 个结算字段。可设比例与<strong>豁免权值</strong>：订单该字段原值=豁免权值时保持原样；<strong>留空表示不启用豁免</strong>。</p>
+          <div class="table-wrap">
+            <table class="strategy-table field-config-table">
+              <colgroup><col class="col-field" /><col class="col-ratio" /><col class="col-skip" /></colgroup>
+              <thead><tr><th>结算字段</th><th>比例(%)</th><th>豁免权值</th></tr></thead>
+              <tbody id="fieldRatioBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="config-block config-block-inline">
+          <div class="config-block-head"><div><h3>白名单隔离</h3><p>勾选后对应白名单规则参与整单级校验。</p></div></div>
+          <div class="spec-inline checkbox-group">
+            <label class="checkbox-item"><input type="checkbox" id="wlIsoUser" value="user" />用户</label>
+            <label class="checkbox-item"><input type="checkbox" id="wlIsoKeyword" value="keyword" />关键词</label>
+          </div>
+        </div>
+        <div class="config-block config-block-inline">
+          <div class="config-block-head"><div><h3>前几名不优化</h3><p>在未被 ①② 豁免的订单池内按收益取 Top N，整单原样。</p></div></div>
+          <div class="spec-inline">
+            <div class="form-field">
+              <label for="editTopN">前 N 名（0=关）</label>
+              <input type="number" id="editTopN" class="input-narrow" min="0" max="100" />
+            </div>
+          </div>
+        </div>
+        <div class="config-block">
+          <div class="config-block-head">
+            <div><h3>书籍 / 短剧 ID 差异化比例</h3><p>命中书籍 ID 或短剧 ID 时使用专属比例，未命中则走结算字段比例。</p></div>
+            <button class="btn-inline-add" type="button" onclick="addIdRatioRow()">+ 新增</button>
+          </div>
+          <div class="table-wrap"><table class="strategy-table id-ratio-table"><colgroup><col class="col-match" /><col class="col-val" /><col class="col-ratio" /><col class="col-act" /></colgroup><thead><tr><th>匹配</th><th>值</th><th>比例(%)</th><th></th></tr></thead><tbody id="idRatioBody"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-footer">
+      <button class="btn btn-ghost" type="button" onclick="closeStrategyEditDrawer()">取消</button>
+      <button class="btn btn-primary" type="button" onclick="saveStrategyEdit()">保存策略</button>
+    </div>
+  </aside>
+
+  <!-- 对比抽屉 -->
+  <div class="drawer-overlay" id="compareOverlay" onclick="closeCompareDrawer()"></div>
+  <aside class="drawer" id="compareDrawer">
+    <div class="drawer-header">
+      <div>
+        <h2 id="compareTitle">优化对比</h2>
+        <p id="compareSub"></p>
+      </div>
+      <button class="drawer-close" type="button" onclick="closeCompareDrawer()">×</button>
+    </div>
+    <div class="drawer-body">
+      <div class="compare-summary" id="compareSummary"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>用户ID</th><th>关键词</th><th>拉新量</th><th>拉旧量</th><th>会员量</th><th>说明</th>
+            </tr>
+          </thead>
+          <tbody id="compareBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 需求规则抽屉 -->
+  <div class="drawer-overlay" id="ruleOverlay" onclick="setRuleDrawer(false)"></div>
+  <aside class="drawer" id="ruleDrawer" style="width:480px;">
+    <div class="drawer-header">
+      <h2>FR-005 · 需求规则 · v1</h2>
+      <button class="drawer-close" type="button" onclick="setRuleDrawer(false)">×</button>
+    </div>
+    <div class="drawer-body">
+      <div class="rule-section">
+        <h3><span>1</span>业务目标</h3>
+        <div class="rule-content">
+          <p>合作方原始订单导入后，平台按项目策略对参与结算字段批量优化，输出优化后 Excel 供内部使用。<strong>无 C 端呈现</strong>；原始订单保留对账。</p>
+        </div>
+      </div>
+      <div class="rule-section">
+        <h3><span>2</span>后台 Tab</h3>
+        <div class="rule-content">
+          <ul>
+            <li><strong>优化策略</strong>：策略列表，可新增；每条策略含名称、<strong>优化项目</strong>（多选）、<strong>结算字段比例与豁免权值</strong>、白名单隔离、ID 比例、前几名等<strong>共存生效</strong>的配置；支持查看详情、编辑。</li>
+            <li><strong>用户白名单</strong>：独立 Tab；字段含用户 ID、状态、添加时间（<strong>无所属项目</strong>）；支持新增、编辑、删除、批量导入。</li>
+            <li><strong>关键词白名单</strong>：独立 Tab；字段含所属项目、关键词、状态、添加时间；支持新增、编辑、删除、批量导入。</li>
+            <li><strong>优化记录</strong>：导入时选择优化策略 → 执行优化 → 列表展示汇总指标；支持下载、删除、查看对比。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="rule-section">
+        <h3><span>3</span>优化记录字段</h3>
+        <div class="rule-content">
+          <ul>
+            <li>项目名称、<strong>选择优化策略</strong>、优化前/后订单量、优化前/后累计金额、优化时间。</li>
+            <li>操作：下载优化后 Excel、删除（需确认）、查看对比（抽屉展示逐单原始 vs 优化）。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="rule-section">
+        <h3><span>4</span>策略口径</h3>
+        <div class="rule-content">
+          <ul>
+            <li><strong>优化校验顺序</strong>：整单级 ①→②→③ 顺序判定、命中即跳过后续整单校验；通过整单校验后进入逐字段 ④→⑤，④ 仅豁免当前字段、其余字段继续。</li>
+            <li>① 用户白名单：策略勾选且用户 ID 命中 → 整单原样，不优化。</li>
+            <li>② 关键词白名单：策略勾选且关键词命中 → 整单原样，不优化。</li>
+            <li>③ 前几名不优化：在<strong>未被 ①② 整单豁免的订单池</strong>内按收益降序取 Top N → 整单原样，不优化。</li>
+            <li>④ 特定单量：结算字段配置了<strong>豁免权值</strong>且订单该字段原值=豁免权值 → 该字段原样；未配置豁免权值则跳过此校验。</li>
+            <li>⑤ 书籍ID：书籍ID/短剧ID 命中时使用专属比例（可 &gt;100%），未命中用<strong>结算字段比例</strong>；计算 <code>floor(原始值 × 比例%)</code>，字段级独立截断取整。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="rule-section">
+        <h3><span>5</span>业务流程</h3>
+        <div class="rule-content"><p>见页内「业务流程」Tab。</p></div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="toast" id="toast"></div>
+  <script src="sidebar-nav.js"></script>
+  <script>
+    var PROJECT_LIST = [
+      '番茄小说', '知乎故事', '番茄畅听', '红果短剧APP-短剧', '红果漫剧APP', '迅雷网盘', '书旗短篇', '最右',
+      'UC故事会', '起点', 'QQ阅读', '飞卢小说', '七猫小说', '掌阅长篇', '书旗长篇', '盐言星图', '盐言聚星', '悟空网文'
+    ];
+
+    var SETTLEMENT_FIELDS = [
+      { key: 'registration_num', label: '拉新量' },
+      { key: 'pc_registration_num', label: 'PC拉新量' },
+      { key: 'overseas_registration_num', label: '海外拉新量' },
+      { key: 'reinstall_num', label: '拉旧量（拉失活量）' },
+      { key: 'overseas_reinstall_num', label: '海外拉失活量' },
+      { key: 'file_transfer_num', label: '转存量' },
+      { key: 'pc_file_transfer_num', label: 'PC转存量' },
+      { key: 'overseas_file_transfer_num', label: '海外转存量' },
+      { key: 'member_num', label: '会员量' }
+    ];
+
+    // 全部结算字段（选中优化项目后统一展示）
+    function getMergedFieldsForProjects(projects) {
+      if (!projects || !projects.length) return [];
+      return SETTLEMENT_FIELDS.slice();
+    }
+
+    var SETTLEMENT_FIELD_KEYS = SETTLEMENT_FIELDS.map(function (f) { return f.key; });
+    var FIELD_LABELS = SETTLEMENT_FIELDS.reduce(function (acc, f) {
+      acc[f.key] = f.label;
+      return acc;
+    }, {});
+
+    var WL_ISOLATION_OPTIONS = [
+      { value: 'user', label: '用户白名单' },
+      { value: 'keyword', label: '关键词白名单' }
+    ];
+
+    function buildFieldSelectOptions(fields, selected) {
+      return fields.map(function (f) {
+        return '<option value="' + f.key + '"' + (selected === f.key ? ' selected' : '') + '>' + f.label + '</option>';
+      }).join('');
+    }
+
+    function defaultFieldRatios() {
+      var ratios = {};
+      SETTLEMENT_FIELDS.forEach(function (f) { ratios[f.key] = 80; });
+      return ratios;
+    }
+
+    var strategies = [
+      {
+        id: 'STR-001', name: '番茄默认策略', topN: 1, updatedAt: '2026-08-24 10:00',
+        optimizeProjects: ['番茄小说', '番茄畅听'],
+        fieldRatios: Object.assign(defaultFieldRatios(), { member_num: 90 }),
+        fieldSkipValues: { registration_num: 5 },
+        whitelistIsolation: ['user', 'keyword'],
+        idRatioRules: [{ id: 1, matchField: 'bookId', matchLabel: '书籍ID', matchValue: '1', ratio: 120 }]
+      },
+      {
+        id: 'STR-002', name: '知乎高比例策略', topN: 0, updatedAt: '2026-08-22 16:30',
+        optimizeProjects: ['知乎故事'],
+        fieldRatios: Object.assign(defaultFieldRatios(), { registration_num: 90, reinstall_num: 90 }),
+        fieldSkipValues: {},
+        whitelistIsolation: ['user'],
+        idRatioRules: []
+      }
+    ];
+
+    strategies.forEach(normalizeStrategy);
+
+    var editingStrategyId = null;
+    var viewingStrategyId = null;
+
+    var userWhitelist = [
+      { id: 1, userId: 'U-99999', status: 'enabled', createdAt: '2026-08-20 10:00' },
+      { id: 2, userId: 'U-88888', status: 'disabled', createdAt: '2026-08-21 14:30' }
+    ];
+
+    var keywordWhitelist = [
+      { id: 1, projectName: '番茄小说', keyword: '免优化词', status: 'enabled', createdAt: '2026-08-19 11:20' },
+      { id: 2, projectName: '知乎故事', keyword: 'VIP专属词', status: 'disabled', createdAt: '2026-08-22 09:00' }
+    ];
+
+    var editingUserWlId = null;
+    var editingKeywordWlId = null;
+    var wlImportType = 'user';
+
+    var rawOrders = [
+      { id: 'O-001', userId: 'U-10001', keyword: 'Summer推广词', bookId: '2', revenue: 180, registration_num: 4, reinstall_num: 2, member_num: 36 },
+      { id: 'O-002', userId: 'U-10002', keyword: '秋季词', bookId: '1', revenue: 320, registration_num: 5, reinstall_num: 1, member_num: 50 },
+      { id: 'O-003', userId: 'U-10003', keyword: 'VIP专属词', bookId: '1', revenue: 450, registration_num: 8, reinstall_num: 3, member_num: 120 },
+      { id: 'O-004', userId: 'U-99999', keyword: '普通推广词', bookId: '2', revenue: 200, registration_num: 10, reinstall_num: 0, member_num: 200 },
+      { id: 'O-005', userId: 'U-10005', keyword: '免优化词', bookId: '3', revenue: 150, registration_num: 6, reinstall_num: 1, member_num: 80 }
+    ];
+
+    var optimizeRecords = [];
+
+    var pendingDeleteId = null;
+
+    function getStrategy(id) {
+      var s = strategies.find(function (x) { return x.id === id; });
+      return s ? normalizeStrategy(s) : null;
+    }
+
+    function getEditingStrategy() {
+      return editingStrategyId ? getStrategy(editingStrategyId) : null;
+    }
+
+    function normalizeStrategy(s) {
+      if (!s.fieldSkipValues) s.fieldSkipValues = {};
+      if (s.volumeSkipRules && s.volumeSkipRules.length) {
+        s.volumeSkipRules.forEach(function (r) {
+          if (r.field != null && r.value != null && r.value !== '') s.fieldSkipValues[r.field] = r.value;
+        });
+        delete s.volumeSkipRules;
+      }
+      return s;
+    }
+
+    function countFieldSkipValues(strategy) {
+      var map = strategy.fieldSkipValues || {};
+      return Object.keys(map).filter(function (k) {
+        return map[k] !== null && map[k] !== undefined && String(map[k]).trim() !== '';
+      }).length;
+    }
+
+    function getFieldSkipValue(strategy, fieldKey) {
+      if (!strategy.fieldSkipValues) return null;
+      var v = strategy.fieldSkipValues[fieldKey];
+      if (v === null || v === undefined || String(v).trim() === '') return null;
+      return v;
+    }
+
+    function cloneStrategyConfig(s) {
+      normalizeStrategy(s);
+      return {
+        optimizeProjects: (s.optimizeProjects || []).slice(),
+        fieldRatios: Object.assign(defaultFieldRatios(), s.fieldRatios || {}),
+        fieldSkipValues: Object.assign({}, s.fieldSkipValues || {}),
+        topN: s.topN,
+        idRatioRules: s.idRatioRules.slice()
+      };
+    }
+
+    function formatOptimizeProjects(arr) {
+      if (!arr || !arr.length) return '未配置';
+      if (arr.length <= 2) return arr.join('、');
+      return arr.slice(0, 2).join('、') + ' 等 ' + arr.length + ' 个';
+    }
+
+    function orderSettleTotal(order) {
+      var sum = 0;
+      SETTLEMENT_FIELD_KEYS.forEach(function (k) {
+        if (order[k] != null && !isNaN(order[k])) sum += Number(order[k]);
+      });
+      return sum;
+    }
+
+    function getStrategyFieldKeys(strategy) {
+      return getMergedFieldsForProjects(strategy.optimizeProjects || []).map(function (f) { return f.key; });
+    }
+
+    function getOrderFieldKeys(order, strategy) {
+      var keys = strategy ? getStrategyFieldKeys(strategy) : SETTLEMENT_FIELD_KEYS;
+      return keys.filter(function (k) { return order[k] != null; });
+    }
+
+    function strategyAppliesToProject(strategy, projectName) {
+      if (!strategy.optimizeProjects || !strategy.optimizeProjects.length) return true;
+      return strategy.optimizeProjects.indexOf(projectName) >= 0;
+    }
+
+    function formatWhitelistIsolation(arr) {
+      if (!arr || !arr.length) return '未启用';
+      return arr.map(function (v) {
+        var opt = WL_ISOLATION_OPTIONS.find(function (o) { return o.value === v; });
+        return opt ? opt.label : v;
+      }).join('、');
+    }
+
+    function strategyUsesUserWhitelist(strategy) {
+      return strategy.whitelistIsolation && strategy.whitelistIsolation.indexOf('user') >= 0;
+    }
+
+    function strategyUsesKeywordWhitelist(strategy) {
+      return strategy.whitelistIsolation && strategy.whitelistIsolation.indexOf('keyword') >= 0;
+    }
+
+    function readWhitelistIsolationFromForm() {
+      var result = [];
+      if (document.getElementById('wlIsoUser').checked) result.push('user');
+      if (document.getElementById('wlIsoKeyword').checked) result.push('keyword');
+      return result;
+    }
+
+    function setWhitelistIsolationForm(arr) {
+      var list = arr || [];
+      document.getElementById('wlIsoUser').checked = list.indexOf('user') >= 0;
+      document.getElementById('wlIsoKeyword').checked = list.indexOf('keyword') >= 0;
+    }
+
+    function nowStr() {
+      return new Date().toISOString().slice(0, 16).replace('T', ' ');
+    }
+
+    function statusTag(status) {
+      return status === 'enabled'
+        ? '<span class="tag tag-ok">启用</span>'
+        : '<span class="tag tag-warn">禁用</span>';
+    }
+
+    function projectMatch(entryProject, batchProject) {
+      return entryProject === '全部项目' || entryProject === batchProject;
+    }
+
+    function getActiveUserIds() {
+      return userWhitelist.filter(function (u) { return u.status === 'enabled'; }).map(function (u) { return u.userId; });
+    }
+
+    function matchKeywordWhitelist(order, batchProject) {
+      return keywordWhitelist.some(function (k) {
+        return k.status === 'enabled'
+          && projectMatch(k.projectName, batchProject)
+          && order.keyword.indexOf(k.keyword) >= 0;
+      });
+    }
+
+    function floorRatio(val, ratio) {
+      return Math.floor(Number(val) * Number(ratio) / 100);
+    }
+
+    function getIdOverrideRatio(order, strategy) {
+      for (var i = 0; i < strategy.idRatioRules.length; i++) {
+        var r = strategy.idRatioRules[i];
+        if (String(order[r.matchField]) === String(r.matchValue)) return r.ratio;
+      }
+      return null;
+    }
+
+    function getFieldRatio(order, strategy, fieldKey) {
+      var idRatio = getIdOverrideRatio(order, strategy);
+      if (idRatio !== null) return idRatio;
+      return Number((strategy.fieldRatios && strategy.fieldRatios[fieldKey]) != null
+        ? strategy.fieldRatios[fieldKey]
+        : 80);
+    }
+
+    function orderExemptByUserWhitelist(order, strategy, uidWl) {
+      return strategyUsesUserWhitelist(strategy) && uidWl.indexOf(order.userId) >= 0;
+    }
+
+    function orderExemptByKeywordWhitelist(order, strategy, project) {
+      return strategyUsesKeywordWhitelist(strategy) && matchKeywordWhitelist(order, project);
+    }
+
+    function computeTopNSet(orders, n, strategy, batchProject) {
+      if (!n || n <= 0) return new Set();
+      var project = batchProject || '番茄小说';
+      var uidWl = getActiveUserIds();
+      // Top N 仅在通过 ①② 的订单池内排名，避免白名单订单占用名次
+      var eligible = orders.filter(function (order) {
+        return !orderExemptByUserWhitelist(order, strategy, uidWl)
+          && !orderExemptByKeywordWhitelist(order, strategy, project);
+      });
+      var sorted = eligible.slice().sort(function (a, b) { return b.revenue - a.revenue; });
+      return new Set(sorted.slice(0, n).map(function (o) { return o.id; }));
+    }
+
+    function optimizeBatch(orders, batchProject, strategy) {
+      if (!strategy) return [];
+      var project = batchProject || '番茄小说';
+      var topNSet = computeTopNSet(orders, strategy.topN, strategy, project);
+      var uidWl = getActiveUserIds();
+      return orders.map(function (order) {
+        // ① 用户白名单（整单豁免，优先级最高）
+        if (orderExemptByUserWhitelist(order, strategy, uidWl)) {
+          return { raw: order, display: Object.assign({}, order), reason: '用户ID白名单', skipAll: true };
+        }
+        // ② 关键词白名单（整单豁免）
+        if (orderExemptByKeywordWhitelist(order, strategy, project)) {
+          return { raw: order, display: Object.assign({}, order), reason: '关键词白名单', skipAll: true };
+        }
+        // ③ 前几名不优化（整单豁免）
+        if (topNSet.has(order.id)) {
+          return { raw: order, display: Object.assign({}, order), reason: '前几名 Top' + strategy.topN, skipAll: true };
+        }
+        // ④ 特定单量（字段级豁免）→ ⑤ 书籍ID / 默认比例
+        var display = Object.assign({}, order);
+        var notes = [];
+        var idOverride = null;
+        var optimizedAny = false;
+        var fieldKeys = getOrderFieldKeys(order, strategy);
+        fieldKeys.forEach(function (key) {
+          var skipVal = getFieldSkipValue(strategy, key);
+          if (skipVal !== null && Number(order[key]) === Number(skipVal)) {
+            display[key] = order[key];
+            notes.push(FIELD_LABELS[key] + '=' + order[key] + ' 豁免权值');
+          } else {
+            var ratio = getFieldRatio(order, strategy, key);
+            if (idOverride === null) idOverride = getIdOverrideRatio(order, strategy);
+            display[key] = floorRatio(order[key], ratio);
+            optimizedAny = true;
+          }
+        });
+        var ratioNote = idOverride !== null ? '书籍ID比例 ' + idOverride + '%' : '结算字段比例';
+        var reason = notes.length ? notes.join('；') : ratioNote;
+        if (notes.length && optimizedAny) reason += '；' + ratioNote;
+        return { raw: order, display: display, reason: reason, skipAll: false };
+      });
+    }
+
+    function summarizeBatch(results) {
+      var beforeAmount = 0, afterAmount = 0;
+      results.forEach(function (r) {
+        beforeAmount += orderSettleTotal(r.raw);
+        afterAmount += orderSettleTotal(r.display);
+      });
+      return {
+        beforeCount: results.length,
+        afterCount: results.length,
+        beforeAmount: beforeAmount,
+        afterAmount: afterAmount,
+        details: results
+      };
+    }
+
+    function renderAll() {
+      renderStrategyList();
+      renderIdRatioTable();
+      renderFieldRatioTable();
+      renderUserWhitelistTable();
+      renderKeywordWhitelistTable();
+      renderRecordsTable();
+      refreshImportStrategySelect();
+      refreshProjectSelects();
+    }
+
+    function refreshProjectSelects() {
+      var importSel = document.getElementById('importProject');
+      if (importSel) {
+        importSel.innerHTML = PROJECT_LIST.map(function (p, i) {
+          return '<option value="' + p + '"' + (i === 0 ? ' selected' : '') + '>' + p + '</option>';
+        }).join('');
+      }
+      var kwSel = document.getElementById('wlKwProject');
+      if (kwSel && !kwSel.dataset.ready) {
+        kwSel.innerHTML = ['<option value="全部项目">全部项目</option>'].concat(
+          PROJECT_LIST.map(function (p) { return '<option value="' + p + '">' + p + '</option>'; })
+        ).join('');
+        kwSel.dataset.ready = '1';
+      }
+    }
+
+    function initOptimizeProjectsPanel() {
+      var panel = document.getElementById('editOptimizeProjectsPanel');
+      if (!panel || panel.dataset.ready) return;
+      panel.innerHTML = '<div class="project-checkbox-grid">' + PROJECT_LIST.map(function (p) {
+        return '<label class="checkbox-item"><input type="checkbox" name="optProject" value="' + p + '" onchange="onOptimizeProjectChange()" />' + p + '</label>';
+      }).join('') + '</div>';
+      panel.dataset.ready = '1';
+    }
+
+    function toggleProjectDropdown(e) {
+      e.stopPropagation();
+      var panel = document.getElementById('editOptimizeProjectsPanel');
+      panel.classList.toggle('open');
+    }
+
+    function closeProjectDropdown() {
+      var panel = document.getElementById('editOptimizeProjectsPanel');
+      if (panel) panel.classList.remove('open');
+    }
+
+    function setOptimizeProjectsForm(arr) {
+      initOptimizeProjectsPanel();
+      var selected = arr || [];
+      document.querySelectorAll('#editOptimizeProjectsPanel input[name="optProject"]').forEach(function (cb) {
+        cb.checked = selected.indexOf(cb.value) >= 0;
+      });
+      updateProjectsSummary(selected);
+    }
+
+    function readOptimizeProjectsFromForm() {
+      var result = [];
+      document.querySelectorAll('#editOptimizeProjectsPanel input[name="optProject"]:checked').forEach(function (cb) {
+        result.push(cb.value);
+      });
+      return result;
+    }
+
+    function updateProjectsSummary(projects) {
+      var el = document.getElementById('editProjectsSummary');
+      if (!el) return;
+      if (!projects || !projects.length) el.textContent = '请选择优化项目';
+      else if (projects.length <= 2) el.textContent = projects.join('、');
+      else el.textContent = '已选 ' + projects.length + ' 个项目';
+    }
+
+    function onOptimizeProjectChange() {
+      var s = getEditingStrategy();
+      if (s) {
+        syncInlineRulesFromForm();
+        var configs = readFieldConfigsFromForm();
+        s.fieldRatios = configs.fieldRatios;
+        s.fieldSkipValues = configs.fieldSkipValues;
+        s.optimizeProjects = readOptimizeProjectsFromForm();
+      }
+      updateProjectsSummary(s ? s.optimizeProjects : []);
+      renderFieldRatioTable();
+    }
+
+    function renderFieldRatioTable() {
+      var s = getEditingStrategy();
+      var body = document.getElementById('fieldRatioBody');
+      if (!body) return;
+      if (!s) { body.innerHTML = ''; return; }
+      normalizeStrategy(s);
+      var projects = s.optimizeProjects || [];
+      if (!projects.length) {
+        body.innerHTML = '<tr><td colspan="3" style="color:var(--text-muted);padding:12px;">请先选择优化项目</td></tr>';
+        return;
+      }
+      var fields = getMergedFieldsForProjects(projects);
+      if (!fields.length) {
+        body.innerHTML = '<tr><td colspan="3" style="color:var(--text-muted);padding:12px;">所选项目无可用结算字段</td></tr>';
+        return;
+      }
+      body.innerHTML = fields.map(function (f) {
+        var ratio = (s.fieldRatios && s.fieldRatios[f.key] != null) ? s.fieldRatios[f.key] : 80;
+        var skipVal = getFieldSkipValue(s, f.key);
+        var skipAttr = skipVal !== null ? ' value="' + skipVal + '"' : '';
+        return '<tr data-field-key="' + f.key + '">' +
+          '<td class="field-cell"><span class="field-label">' + f.label + '</span><span class="field-key"><code>' + f.key + '</code></span></td>' +
+          '<td class="num-cell"><input type="number" class="field-ratio-input" value="' + ratio + '" min="1" max="500" /></td>' +
+          '<td class="num-cell"><input type="number" class="field-skip-input" placeholder="—"' + skipAttr + ' /></td></tr>';
+      }).join('');
+    }
+
+    function readFieldConfigsFromForm() {
+      var fieldRatios = defaultFieldRatios();
+      var fieldSkipValues = {};
+      document.querySelectorAll('#fieldRatioBody tr[data-field-key]').forEach(function (tr) {
+        var key = tr.getAttribute('data-field-key');
+        var ratioInp = tr.querySelector('.field-ratio-input');
+        var skipInp = tr.querySelector('.field-skip-input');
+        if (!key || !ratioInp) return;
+        fieldRatios[key] = Number(ratioInp.value) || 80;
+        var skipRaw = skipInp ? String(skipInp.value).trim() : '';
+        if (skipRaw !== '') fieldSkipValues[key] = Number(skipRaw);
+      });
+      return { fieldRatios: fieldRatios, fieldSkipValues: fieldSkipValues };
+    }
+
+    function readFieldRatiosFromForm() {
+      return readFieldConfigsFromForm().fieldRatios;
+    }
+
+    function renderStrategyList() {
+      var body = document.getElementById('strategyListBody');
+      if (!body) return;
+      body.innerHTML = strategies.map(function (s) {
+        return '<tr>' +
+          '<td><div>' + s.name + '</div><div class="cell-sub">' + s.id + '</div></td>' +
+          '<td>' + formatOptimizeProjects(s.optimizeProjects) + '</td>' +
+          '<td>' + formatWhitelistIsolation(s.whitelistIsolation) + '</td>' +
+          '<td>' + (s.topN > 0 ? '前 ' + s.topN + ' 名' : '关闭') + '</td>' +
+          '<td>' + s.idRatioRules.length + '</td>' +
+          '<td>' + countFieldSkipValues(s) + '</td>' +
+          '<td>' + s.updatedAt + '</td>' +
+          '<td>' +
+            '<button class="link" type="button" onclick="openStrategyDetailDrawer(\'' + s.id + '\')">查看详情</button>' +
+            '<button class="link" type="button" onclick="openStrategyEditDrawer(\'' + s.id + '\')">编辑策略</button>' +
+          '</td></tr>';
+      }).join('');
+    }
+
+    function refreshImportStrategySelect() {
+      var sel = document.getElementById('importStrategy');
+      if (!sel) return;
+      sel.innerHTML = strategies.map(function (s) {
+        return '<option value="' + s.id + '">' + s.name + '</option>';
+      }).join('');
+    }
+
+    function renderIdRatioTable() {
+      var s = getEditingStrategy();
+      var body = document.getElementById('idRatioBody');
+      if (!body || !s) { if (body) body.innerHTML = ''; return; }
+      if (!s.idRatioRules.length) {
+        body.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted);padding:12px;">暂无规则，点击「+ 新增」添加</td></tr>';
+        return;
+      }
+      body.innerHTML = s.idRatioRules.map(function (r) {
+        return '<tr data-rule-id="' + r.id + '">' +
+          '<td><select class="inline-cell-input id-ratio-field" data-id="' + r.id + '">' +
+            '<option value="bookId"' + (r.matchField === 'bookId' ? ' selected' : '') + '>书籍ID</option>' +
+            '<option value="dramaId"' + (r.matchField === 'dramaId' ? ' selected' : '') + '>短剧ID</option>' +
+          '</select></td>' +
+          '<td><input class="inline-cell-input id-ratio-value" data-id="' + r.id + '" value="' + (r.matchValue || '') + '" placeholder="1" /></td>' +
+          '<td><input type="number" class="inline-cell-input num id-ratio-ratio" data-id="' + r.id + '" value="' + r.ratio + '" min="1" max="500" /></td>' +
+          '<td><button class="link link-danger" type="button" onclick="removeIdRatio(' + r.id + ')">删</button></td></tr>';
+      }).join('');
+    }
+
+    function syncInlineRulesFromForm() {
+      var s = getEditingStrategy();
+      if (!s) return;
+      document.querySelectorAll('#idRatioBody tr[data-rule-id]').forEach(function (tr) {
+        var id = Number(tr.getAttribute('data-rule-id'));
+        var rule = s.idRatioRules.find(function (r) { return r.id === id; });
+        if (!rule) return;
+        var fieldEl = tr.querySelector('.id-ratio-field');
+        rule.matchField = fieldEl.value;
+        rule.matchLabel = fieldEl.value === 'bookId' ? '书籍ID' : '短剧ID';
+        rule.matchValue = tr.querySelector('.id-ratio-value').value;
+        rule.ratio = Number(tr.querySelector('.id-ratio-ratio').value) || 120;
+      });
+    }
+
+    function addIdRatioRow() {
+      var s = getEditingStrategy();
+      if (!s) return showToast('请先打开策略编辑');
+      s.idRatioRules.push({
+        id: Date.now(), matchField: 'bookId', matchLabel: '书籍ID', matchValue: '', ratio: 120
+      });
+      renderIdRatioTable();
+    }
+
+    function renderUserWhitelistTable() {
+      var idQ = ((document.getElementById('filterUserId') || {}).value || '').trim().toLowerCase();
+      var statusQ = (document.getElementById('filterUserStatus') || {}).value || '';
+      var list = userWhitelist.filter(function (u) {
+        if (idQ && u.userId.toLowerCase().indexOf(idQ) < 0) return false;
+        if (statusQ && u.status !== statusQ) return false;
+        return true;
+      });
+      document.getElementById('userWhitelistBody').innerHTML = list.map(function (u) {
+        return '<tr><td>' + u.userId + '</td><td>' + statusTag(u.status) + '</td><td>' + u.createdAt + '</td>' +
+          '<td><button class="link" type="button" onclick="openUserWhitelistModal(' + u.id + ')">编辑</button>' +
+          '<button class="link link-danger" type="button" onclick="confirmDeleteUserWhitelist(' + u.id + ')">删除</button></td></tr>';
+      }).join('');
+    }
+
+    function renderKeywordWhitelistTable() {
+      var projectQ = ((document.getElementById('filterKwProject') || {}).value || '').trim();
+      var kwQ = ((document.getElementById('filterKeyword') || {}).value || '').trim();
+      var statusQ = (document.getElementById('filterKwStatus') || {}).value || '';
+      var list = keywordWhitelist.filter(function (k) {
+        if (projectQ && k.projectName.indexOf(projectQ) < 0) return false;
+        if (kwQ && k.keyword.indexOf(kwQ) < 0) return false;
+        if (statusQ && k.status !== statusQ) return false;
+        return true;
+      });
+      document.getElementById('keywordWhitelistBody').innerHTML = list.map(function (k) {
+        return '<tr><td>' + k.projectName + '</td><td>' + k.keyword + '</td><td>' + statusTag(k.status) + '</td><td>' + k.createdAt + '</td>' +
+          '<td><button class="link" type="button" onclick="openKeywordWhitelistModal(' + k.id + ')">编辑</button>' +
+          '<button class="link link-danger" type="button" onclick="confirmDeleteKeywordWhitelist(' + k.id + ')">删除</button></td></tr>';
+      }).join('');
+    }
+
+    function resetUserWhitelistFilter() {
+      document.getElementById('filterUserId').value = '';
+      document.getElementById('filterUserStatus').value = '';
+      renderUserWhitelistTable();
+    }
+
+    function resetKeywordWhitelistFilter() {
+      document.getElementById('filterKwProject').value = '';
+      document.getElementById('filterKeyword').value = '';
+      document.getElementById('filterKwStatus').value = '';
+      renderKeywordWhitelistTable();
+    }
+
+    function fmtAmount(n) {
+      return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function renderRecordsTable() {
+      var filterEl = document.getElementById('filterProject');
+      var q = ((filterEl && filterEl.value) || '').trim();
+      var list = optimizeRecords.filter(function (r) {
+        return !q || r.projectName.indexOf(q) >= 0;
+      });
+      document.getElementById('recordsBody').innerHTML = list.map(function (r) {
+        var amtClass = r.afterAmount < r.beforeAmount ? 'amount-down' : (r.afterAmount > r.beforeAmount ? 'amount-up' : '');
+        return '<tr>' +
+          '<td><div>' + r.projectName + '</div><div class="cell-sub">' + r.id + '</div></td>' +
+          '<td>' + (r.strategyName || '—') + '</td>' +
+          '<td>' + r.beforeCount + '</td><td>' + r.afterCount + '</td>' +
+          '<td>' + fmtAmount(r.beforeAmount) + '</td>' +
+          '<td class="' + amtClass + '">' + fmtAmount(r.afterAmount) + '</td>' +
+          '<td>' + r.createdAt + '</td>' +
+          '<td>' +
+            '<button class="link" type="button" onclick="downloadRecord(\'' + r.id + '\')">下载优化后 Excel</button>' +
+            '<button class="link" type="button" onclick="openCompareDrawer(\'' + r.id + '\')">查看对比</button>' +
+            '<button class="link link-danger" type="button" onclick="confirmDeleteRecord(\'' + r.id + '\')">删除</button>' +
+          '</td></tr>';
+      }).join('');
+    }
+
+    function openNewStrategyModal() {
+      document.getElementById('newStrategyName').value = '';
+      document.getElementById('newStrategyOverlay').classList.add('open');
+    }
+    function closeNewStrategyModal() {
+      document.getElementById('newStrategyOverlay').classList.remove('open');
+    }
+    function createStrategy() {
+      var name = document.getElementById('newStrategyName').value.trim();
+      if (!name) return showToast('请填写策略名称');
+      var id = 'STR-' + String(Date.now()).slice(-6);
+      strategies.unshift({
+        id: id, name: name, topN: 0, updatedAt: nowStr(),
+        optimizeProjects: [],
+        fieldRatios: defaultFieldRatios(),
+        whitelistIsolation: ['user', 'keyword'],
+        idRatioRules: [], fieldSkipValues: {}
+      });
+      closeNewStrategyModal();
+      renderStrategyList();
+      refreshImportStrategySelect();
+      openStrategyEditDrawer(id);
+      showToast('策略已创建');
+    }
+
+    function buildStrategyDetailHtml(s) {
+      normalizeStrategy(s);
+      var idRows = s.idRatioRules.length
+        ? s.idRatioRules.map(function (r) {
+            return '<tr><td>' + r.matchLabel + '</td><td>' + r.matchValue + '</td><td>' + r.ratio + '%</td></tr>';
+          }).join('')
+        : '<tr><td colspan="3" style="color:var(--text-muted);">暂无 ID 规则</td></tr>';
+      var fieldRows = getMergedFieldsForProjects(s.optimizeProjects || []).map(function (f) {
+        var ratio = (s.fieldRatios && s.fieldRatios[f.key] != null) ? s.fieldRatios[f.key] : 80;
+        var skipVal = getFieldSkipValue(s, f.key);
+        var skipDisplay = skipVal !== null ? skipVal : '—';
+        return '<tr><td>' + f.label + '<span class="field-key"><code>' + f.key + '</code></span></td><td>' + ratio + '%</td><td>' + skipDisplay + '</td></tr>';
+      }).join('');
+      if (!fieldRows) fieldRows = '<tr><td colspan="3" style="color:var(--text-muted);">未配置优化项目</td></tr>';
+      return '<div class="config-board">' +
+        '<div class="config-block">' +
+          '<div class="detail-grid">' +
+            '<div class="detail-row"><span class="label">优化项目</span><span class="value">' + formatOptimizeProjects(s.optimizeProjects) + '</span></div>' +
+            '<div class="detail-row"><span class="label">白名单隔离</span><span class="value">' + formatWhitelistIsolation(s.whitelistIsolation) + '</span></div>' +
+            '<div class="detail-row"><span class="label">前几名豁免</span><span class="value">' + (s.topN > 0 ? '前 ' + s.topN + ' 名' : '关闭') + '</span></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="config-block">' +
+          '<h3 class="section-subtitle">结算字段比例 · 特定单量豁免</h3>' +
+          '<p class="field-ratio-note">选中优化项目后展示全部结算字段；豁免权值留空表示不启用。</p>' +
+          '<div class="table-wrap"><table class="strategy-table field-config-table"><colgroup><col class="col-field" /><col class="col-ratio" /><col class="col-skip" /></colgroup><thead><tr><th>结算字段</th><th>比例(%)</th><th>豁免权值</th></tr></thead><tbody>' + fieldRows + '</tbody></table></div>' +
+        '</div>' +
+        '<div class="config-block">' +
+          '<h3 class="section-subtitle">书籍 / 短剧 ID 差异化比例</h3>' +
+          '<div class="table-wrap"><table class="strategy-table id-ratio-table"><thead><tr><th>匹配</th><th>值</th><th>比例(%)</th></tr></thead><tbody>' + idRows + '</tbody></table></div>' +
+        '</div></div>';
+    }
+
+    function openStrategyDetailDrawer(id) {
+      var s = getStrategy(id);
+      if (!s) return;
+      viewingStrategyId = id;
+      document.getElementById('strategyDetailTitle').textContent = s.name;
+      document.getElementById('strategyDetailSub').textContent = s.id + ' · 更新于 ' + s.updatedAt;
+      document.getElementById('strategyDetailBody').innerHTML = buildStrategyDetailHtml(s);
+      document.getElementById('strategyDetailEditBtn').onclick = function () {
+        closeStrategyDetailDrawer();
+        openStrategyEditDrawer(id);
+      };
+      document.getElementById('strategyDetailOverlay').classList.add('open');
+      document.getElementById('strategyDetailDrawer').classList.add('open');
+    }
+    function closeStrategyDetailDrawer() {
+      document.getElementById('strategyDetailOverlay').classList.remove('open');
+      document.getElementById('strategyDetailDrawer').classList.remove('open');
+      viewingStrategyId = null;
+    }
+
+    function openStrategyEditDrawer(id) {
+      var s = getStrategy(id);
+      if (!s) return;
+      editingStrategyId = id;
+      document.getElementById('strategyEditTitle').textContent = '编辑策略 · ' + s.name;
+      document.getElementById('editStrategyName').value = s.name;
+      setWhitelistIsolationForm(s.whitelistIsolation);
+      if (!s.fieldRatios) s.fieldRatios = defaultFieldRatios();
+      if (!s.optimizeProjects) s.optimizeProjects = [];
+      setOptimizeProjectsForm(s.optimizeProjects);
+      document.getElementById('editTopN').value = s.topN;
+      renderIdRatioTable();
+      renderFieldRatioTable();
+      document.getElementById('strategyEditOverlay').classList.add('open');
+      document.getElementById('strategyEditDrawer').classList.add('open');
+    }
+    function closeStrategyEditDrawer() {
+      document.getElementById('strategyEditOverlay').classList.remove('open');
+      document.getElementById('strategyEditDrawer').classList.remove('open');
+      editingStrategyId = null;
+      closeProjectDropdown();
+      renderIdRatioTable();
+      renderFieldRatioTable();
+    }
+    function saveStrategyEdit() {
+      var s = getEditingStrategy();
+      if (!s) return;
+      var name = document.getElementById('editStrategyName').value.trim();
+      if (!name) return showToast('请填写策略名称');
+      var projects = readOptimizeProjectsFromForm();
+      if (!projects.length) return showToast('请至少选择一个优化项目');
+      syncInlineRulesFromForm();
+      var configs = readFieldConfigsFromForm();
+      s.name = name;
+      s.optimizeProjects = projects;
+      s.whitelistIsolation = readWhitelistIsolationFromForm();
+      s.fieldRatios = configs.fieldRatios;
+      s.fieldSkipValues = configs.fieldSkipValues;
+      s.topN = Number(document.getElementById('editTopN').value) || 0;
+      s.updatedAt = nowStr();
+      closeStrategyEditDrawer();
+      renderStrategyList();
+      refreshImportStrategySelect();
+      showToast('策略已保存');
+    }
+
+    function removeIdRatio(id) {
+      var s = getEditingStrategy();
+      if (!s) return;
+      s.idRatioRules = s.idRatioRules.filter(function (r) { return r.id !== id; });
+      renderIdRatioTable();
+    }
+
+    function openUserWhitelistModal(editId) {
+      editingUserWlId = editId || null;
+      var item = editId ? userWhitelist.find(function (u) { return u.id === editId; }) : null;
+      document.getElementById('userWlModalTitle').textContent = item ? '编辑用户白名单' : '新增用户白名单';
+      document.getElementById('wlUserId').value = item ? item.userId : '';
+      document.getElementById('wlUserStatus').value = item ? item.status : 'enabled';
+      document.getElementById('userWhitelistOverlay').classList.add('open');
+    }
+    function closeUserWhitelistModal() {
+      document.getElementById('userWhitelistOverlay').classList.remove('open');
+      editingUserWlId = null;
+    }
+    function saveUserWhitelist() {
+      var uid = document.getElementById('wlUserId').value.trim();
+      if (!uid) return;
+      var payload = {
+        userId: uid,
+        status: document.getElementById('wlUserStatus').value
+      };
+      if (editingUserWlId) {
+        var item = userWhitelist.find(function (u) { return u.id === editingUserWlId; });
+        if (item) Object.assign(item, payload);
+        showToast('已更新用户白名单');
+      } else {
+        userWhitelist.push({ id: Date.now(), createdAt: nowStr(), userId: payload.userId, status: payload.status });
+        showToast('已添加用户白名单');
+      }
+      closeUserWhitelistModal();
+      renderUserWhitelistTable();
+    }
+    function confirmDeleteUserWhitelist(id) {
+      var item = userWhitelist.find(function (u) { return u.id === id; });
+      document.getElementById('confirmTitle').textContent = '删除确认';
+      document.getElementById('confirmDesc').textContent = '确定删除用户「' + (item ? item.userId : id) + '」的白名单记录？';
+      document.getElementById('confirmOverlay').classList.add('open');
+      document.getElementById('confirmBtn').onclick = function () {
+        userWhitelist = userWhitelist.filter(function (u) { return u.id !== id; });
+        closeConfirmModal();
+        renderUserWhitelistTable();
+        showToast('已删除用户白名单');
+      };
+    }
+
+    function openKeywordWhitelistModal(editId) {
+      editingKeywordWlId = editId || null;
+      var item = editId ? keywordWhitelist.find(function (k) { return k.id === editId; }) : null;
+      document.getElementById('keywordWlModalTitle').textContent = item ? '编辑关键词白名单' : '新增关键词白名单';
+      refreshProjectSelects();
+      document.getElementById('wlKwProject').value = item ? item.projectName : '番茄小说';
+      document.getElementById('wlKeyword').value = item ? item.keyword : '';
+      document.getElementById('wlKwStatus').value = item ? item.status : 'enabled';
+      document.getElementById('keywordWhitelistOverlay').classList.add('open');
+    }
+    function closeKeywordWhitelistModal() {
+      document.getElementById('keywordWhitelistOverlay').classList.remove('open');
+      editingKeywordWlId = null;
+    }
+    function saveKeywordWhitelist() {
+      var kw = document.getElementById('wlKeyword').value.trim();
+      if (!kw) return;
+      var payload = {
+        projectName: document.getElementById('wlKwProject').value,
+        keyword: kw,
+        status: document.getElementById('wlKwStatus').value
+      };
+      if (editingKeywordWlId) {
+        var item = keywordWhitelist.find(function (k) { return k.id === editingKeywordWlId; });
+        if (item) Object.assign(item, payload);
+        showToast('已更新关键词白名单');
+      } else {
+        keywordWhitelist.push({ id: Date.now(), createdAt: nowStr(), projectName: payload.projectName, keyword: payload.keyword, status: payload.status });
+        showToast('已添加关键词白名单');
+      }
+      closeKeywordWhitelistModal();
+      renderKeywordWhitelistTable();
+    }
+    function confirmDeleteKeywordWhitelist(id) {
+      var item = keywordWhitelist.find(function (k) { return k.id === id; });
+      document.getElementById('confirmTitle').textContent = '删除确认';
+      document.getElementById('confirmDesc').textContent = '确定删除关键词「' + (item ? item.keyword : id) + '」的白名单记录？';
+      document.getElementById('confirmOverlay').classList.add('open');
+      document.getElementById('confirmBtn').onclick = function () {
+        keywordWhitelist = keywordWhitelist.filter(function (k) { return k.id !== id; });
+        closeConfirmModal();
+        renderKeywordWhitelistTable();
+        showToast('已删除关键词白名单');
+      };
+    }
+
+    function openWlImportModal(type) {
+      wlImportType = type;
+      document.getElementById('wlImportTitle').textContent = type === 'user' ? '批量导入 · 用户白名单' : '批量导入 · 关键词白名单';
+      document.getElementById('wlImportHint').innerHTML = type === 'user'
+        ? '模版列：<code>用户ID</code>、<code>状态</code>（启用/禁用）。Demo 不上传文件，确认后将追加 2 条 Mock 记录。'
+        : '模版列：<code>所属项目</code>、<code>关键词</code>、<code>状态</code>（启用/禁用）。Demo 不上传文件，确认后将追加 2 条 Mock 记录。';
+      document.getElementById('wlImportFile').value = '';
+      document.getElementById('wlImportOverlay').classList.add('open');
+    }
+    function closeWlImportModal() { document.getElementById('wlImportOverlay').classList.remove('open'); }
+    function submitWlImport() {
+      if (wlImportType === 'user') {
+        userWhitelist.push(
+          { id: Date.now(), userId: 'U-10010', status: 'enabled', createdAt: nowStr() },
+          { id: Date.now() + 1, userId: 'U-10011', status: 'enabled', createdAt: nowStr() }
+        );
+        renderUserWhitelistTable();
+      } else {
+        keywordWhitelist.push(
+          { id: Date.now(), projectName: '番茄小说', keyword: '批量导入词A', status: 'enabled', createdAt: nowStr() },
+          { id: Date.now() + 1, projectName: '全部项目', keyword: '批量导入词B', status: 'disabled', createdAt: nowStr() }
+        );
+        renderKeywordWhitelistTable();
+      }
+      closeWlImportModal();
+      showToast('批量导入完成（Demo Mock）');
+    }
+
+    function openImportModal() {
+      refreshImportStrategySelect();
+      refreshProjectSelects();
+      document.getElementById('importOverlay').classList.add('open');
+    }
+    function closeImportModal() { document.getElementById('importOverlay').classList.remove('open'); }
+
+    function runImportOptimize() {
+      var strategyId = document.getElementById('importStrategy').value;
+      var strategy = getStrategy(strategyId);
+      if (!strategy) return showToast('请选择优化策略');
+      var project = document.getElementById('importProject').value.trim();
+      if (!project) return showToast('请选择项目名称');
+      if (!strategyAppliesToProject(strategy, project)) {
+        return showToast('该策略未绑定项目「' + project + '」，请更换策略或编辑策略优化项目');
+      }
+      var results = optimizeBatch(rawOrders, project, strategy);
+      var summary = summarizeBatch(results);
+      optimizeRecords.unshift({
+        id: 'REC-' + String(Date.now()).slice(-6),
+        projectName: project,
+        strategyId: strategy.id,
+        strategyName: strategy.name,
+        beforeCount: summary.beforeCount,
+        afterCount: summary.afterCount,
+        beforeAmount: summary.beforeAmount,
+        afterAmount: summary.afterAmount,
+        createdAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        details: summary.details
+      });
+      closeImportModal();
+      var recordsBtn = document.querySelector('#adminSubTabs [data-panel="panel-records"]');
+      if (recordsBtn) switchAdminPanel('panel-records', recordsBtn);
+      renderRecordsTable();
+      showToast('导入完成，已生成优化记录');
+    }
+
+    function downloadRecord(id) {
+      showToast('Demo：已开始下载 ' + id + ' 优化后 Excel');
+    }
+
+    function openCompareDrawer(id) {
+      var rec = optimizeRecords.find(function (r) { return r.id === id; });
+      if (!rec) return;
+      if (!rec.details) {
+        var strat = getStrategy(rec.strategyId) || strategies[0];
+        rec.details = optimizeBatch(rawOrders, rec.projectName, strat);
+      }
+      document.getElementById('compareTitle').textContent = rec.projectName + ' · 优化对比';
+      document.getElementById('compareSub').textContent = rec.id + ' · ' + (rec.strategyName || '—') + ' · ' + rec.createdAt;
+      document.getElementById('compareSummary').innerHTML =
+        '<div class="item"><div class="label">优化前累计金额</div><div class="value">' + fmtAmount(rec.beforeAmount) + '</div></div>' +
+        '<div class="item"><div class="label">优化后累计金额</div><div class="value">' + fmtAmount(rec.afterAmount) + '</div></div>' +
+        '<div class="item"><div class="label">优化前订单量</div><div class="value">' + rec.beforeCount + '</div></div>' +
+        '<div class="item"><div class="label">优化后订单量</div><div class="value">' + rec.afterCount + '</div></div>';
+      document.getElementById('compareBody').innerHTML = rec.details.map(function (item) {
+        var o = item.raw, d = item.display;
+        function cell(k) {
+          if (o[k] === d[k]) return String(d[k]);
+          return '<span style="color:#9aa5b4;text-decoration:line-through">' + o[k] + '</span> → <strong>' + d[k] + '</strong>';
+        }
+        return '<tr><td>' + o.userId + '</td><td>' + o.keyword + '</td>' +
+          '<td>' + cell('registration_num') + '</td><td>' + cell('reinstall_num') + '</td><td>' + cell('member_num') + '</td>' +
+          '<td><span class="tag tag-muted">' + item.reason + '</span></td></tr>';
+      }).join('');
+      document.getElementById('compareOverlay').classList.add('open');
+      document.getElementById('compareDrawer').classList.add('open');
+    }
+
+    function closeCompareDrawer() {
+      document.getElementById('compareOverlay').classList.remove('open');
+      document.getElementById('compareDrawer').classList.remove('open');
+    }
+
+    function confirmDeleteRecord(id) {
+      pendingDeleteId = id;
+      var rec = optimizeRecords.find(function (r) { return r.id === id; });
+      document.getElementById('confirmDesc').textContent = '确定删除「' + (rec ? rec.projectName : id) + '」的优化记录？删除后不可恢复。';
+      document.getElementById('confirmOverlay').classList.add('open');
+      document.getElementById('confirmBtn').onclick = function () {
+        optimizeRecords = optimizeRecords.filter(function (r) { return r.id !== pendingDeleteId; });
+        closeConfirmModal();
+        renderRecordsTable();
+        showToast('已删除优化记录');
+      };
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('confirmOverlay').classList.remove('open');
+      pendingDeleteId = null;
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(function () { t.classList.remove('show'); }, 2200);
+    }
+
+    function setRuleDrawer(open) {
+      document.getElementById('ruleOverlay').classList.toggle('open', open);
+      document.getElementById('ruleDrawer').classList.toggle('open', open);
+      document.getElementById('toggleRuleDrawer').classList.toggle('active', open);
+    }
+
+    function currentPageKey() {
+      var btn = document.querySelector('.page-tab-bar button.active');
+      var page = btn ? btn.dataset.page : 'view-admin';
+      if (page === 'view-explain') return 'explain';
+      if (page === 'view-flow') return 'flow';
+      return 'admin';
+    }
+
+    function currentExplainSec() {
+      var btn = document.querySelector('.explain-nav button.active');
+      var id = btn && btn.dataset.explain ? btn.dataset.explain : 'exp-overview';
+      return id.replace('exp-', '');
+    }
+
+    function syncPageUrl() {
+      var params = new URLSearchParams(location.search);
+      var key = currentPageKey();
+      params.set('tab', key);
+      if (key === 'explain') params.set('sec', currentExplainSec());
+      else params.delete('sec');
+      if (key !== 'admin') params.delete('sub');
+      history.replaceState(null, '', '?' + params.toString());
+    }
+
+    function switchExplainTab(explainId, btn) {
+      document.querySelectorAll('.explain-nav button').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.explain-panel').forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      var panel = document.getElementById(explainId);
+      if (panel) panel.classList.add('active');
+      syncPageUrl();
+    }
+
+    function switchPageTab(pageId, btn) {
+      document.querySelectorAll('.page-tab-bar button').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.page-view').forEach(function (v) { v.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById(pageId).classList.add('active');
+      syncPageUrl();
+    }
+
+    function switchAdminPanel(panelId, btn) {
+      document.querySelectorAll('#adminSubTabs button').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('#view-admin .admin-panel').forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      var panel = document.getElementById(panelId);
+      if (panel) panel.classList.add('active');
+      var subMap = {
+        'panel-strategies': 'strategies',
+        'panel-wl-user': 'wl-user',
+        'panel-wl-keyword': 'wl-keyword',
+        'panel-records': 'records'
+      };
+      var params = new URLSearchParams(location.search);
+      params.set('tab', 'admin');
+      if (subMap[panelId]) params.set('sub', subMap[panelId]);
+      history.replaceState(null, '', '?' + params.toString());
+    }
+
+    function seedDemoRecords() {
+      var strat = strategies[0];
+      var results = optimizeBatch(rawOrders, '番茄小说', strat);
+      var summary = summarizeBatch(results);
+      optimizeRecords = [
+        {
+          id: 'REC-001', projectName: '番茄小说',
+          strategyId: strat.id, strategyName: strat.name,
+          beforeCount: summary.beforeCount, afterCount: summary.afterCount,
+          beforeAmount: summary.beforeAmount, afterAmount: summary.afterAmount,
+          createdAt: '2026-08-24 14:30', details: results
+        },
+        {
+          id: 'REC-002', projectName: '知乎故事',
+          strategyId: strategies[1] ? strategies[1].id : strat.id,
+          strategyName: strategies[1] ? strategies[1].name : strat.name,
+          beforeCount: 860, afterCount: 860,
+          beforeAmount: 52340.00, afterAmount: 41872.00,
+          createdAt: '2026-08-23 09:15', details: null
+        }
+      ];
+    }
+
+    function initPage() {
+      initOptimizeProjectsPanel();
+      refreshProjectSelects();
+      document.addEventListener('click', function (e) {
+        var wrap = document.getElementById('editOptimizeProjectsWrap');
+        if (wrap && !wrap.contains(e.target)) closeProjectDropdown();
+      });
+
+      document.getElementById('toggleRuleDrawer').addEventListener('click', function () {
+        setRuleDrawer(!document.getElementById('ruleDrawer').classList.contains('open'));
+      });
+
+      document.querySelectorAll('.page-tab-bar button').forEach(function (btn) {
+        btn.addEventListener('click', function () { switchPageTab(btn.dataset.page, btn); });
+      });
+
+      document.querySelectorAll('.explain-nav button').forEach(function (btn) {
+        btn.addEventListener('click', function () { switchExplainTab(btn.dataset.explain, btn); });
+      });
+
+      document.querySelectorAll('#adminSubTabs [data-panel]').forEach(function (btn) {
+        btn.addEventListener('click', function () { switchAdminPanel(btn.dataset.panel, btn); });
+      });
+
+      seedDemoRecords();
+      renderAll();
+
+      var params = new URLSearchParams(location.search);
+      var tabPageMap = { explain: 'view-explain', admin: 'view-admin', flow: 'view-flow' };
+      var tab = params.get('tab') || 'admin';
+      var pageBtn = document.querySelector('[data-page="' + (tabPageMap[tab] || 'view-admin') + '"]');
+      if (pageBtn) switchPageTab(tabPageMap[tab] || 'view-admin', pageBtn);
+      if (tab === 'explain') {
+        var explainParam = params.get('sec');
+        if (explainParam) {
+          var explainId = explainParam.indexOf('exp-') === 0 ? explainParam : 'exp-' + explainParam;
+          var explainSecBtn = document.querySelector('.explain-nav button[data-explain="' + explainId + '"]');
+          if (explainSecBtn) switchExplainTab(explainId, explainSecBtn);
+        }
+      }
+
+      var subPanelMap = {
+        strategies: 'panel-strategies',
+        config: 'panel-strategies',
+        'wl-user': 'panel-wl-user',
+        whitelist: 'panel-wl-user',
+        'wl-keyword': 'panel-wl-keyword',
+        records: 'panel-records'
+      };
+      var sub = params.get('sub');
+      if (sub && subPanelMap[sub]) {
+        var subBtn = document.querySelector('#adminSubTabs [data-panel="' + subPanelMap[sub] + '"]');
+        if (subBtn) switchAdminPanel(subPanelMap[sub], subBtn);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initPage);
+    } else {
+      initPage();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>钱包合并提现 · 前端交互 Demo</title>
+  <style>
+    :root {
+      --orange: #ff5a2d;
+      --orange-soft: #fff1ea;
+      --orange-border: #ffc9b0;
+      --bg: #f4f5f7;
+      --text: #1c2430;
+      --muted: #8b93a0;
+      --phone-w: 375px;
+      --phone-h: 812px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #e8eaed; min-height: 100vh; color: var(--text);
+    }
+    .demo-shell { display: flex; flex-direction: column; align-items: center; padding: 20px 16px 40px; gap: 16px; }
+    .demo-header { width: 100%; max-width: 960px; background: #fff; border-radius: 12px; padding: 16px 20px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .demo-header h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .demo-header p { font-size: 13px; color: #64748b; line-height: 1.55; }
+    .demo-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .demo-nav button, .mode-nav button {
+      padding: 6px 12px; border-radius: 999px; border: 1px solid #ececec;
+      background: #fff; font-size: 12px; cursor: pointer; color: #6b7280;
+    }
+    .demo-nav button.active, .mode-nav button.active {
+      background: var(--orange-soft); border-color: var(--orange-border); color: var(--orange); font-weight: 600;
+    }
+    .mode-nav { display: flex; gap: 8px; margin-top: 10px; }
+    .phone-frame {
+      width: var(--phone-w); height: var(--phone-h);
+      border-radius: 36px; overflow: hidden; position: relative;
+      box-shadow: 0 20px 60px rgba(0,0,0,.18), inset 0 0 0 8px #1a1a1a;
+      background: var(--bg);
+    }
+    .phone-notch {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 120px; height: 28px; background: #1a1a1a; border-radius: 0 0 16px 16px; z-index: 40;
+    }
+    .screen { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+    .screen.active { display: flex; }
+    .nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 46px 12px 8px; position: relative; z-index: 3; flex-shrink: 0;
+      color: #fff;
+    }
+    .nav.light { color: var(--text); background: #f7f8fa; }
+    .nav .side { width: 36px; height: 32px; border: none; background: none; color: inherit; font-size: 22px; cursor: pointer; }
+    .nav h1 { font-size: 17px; font-weight: 600; }
+    .capsule {
+      display: flex; align-items: center; gap: 8px; padding: 3px 8px;
+      border: 1px solid rgba(255,255,255,.35); border-radius: 999px; background: rgba(255,255,255,.12);
+    }
+    .nav.light .capsule { border-color: rgba(0,0,0,.08); background: #fff; }
+    .capsule i { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid currentColor; opacity: .85; display: inline-block; }
+    .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .page-pad { padding: 12px 12px 28px; background: #f7f8fa; min-height: 100%; }
+    .stat-3 {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; background: #fff;
+      border-radius: 16px; padding: 16px 4px; margin-bottom: 18px; text-align: center;
+    }
+    .stat-3.stat-2 { grid-template-columns: 1fr 1fr; }
+    .stat-3.stat-1 { grid-template-columns: 1fr; }
+    .stat-3 > div { position: relative; }
+    .stat-3 > div:not(:last-child)::after {
+      content: ''; position: absolute; right: 0; top: 18%; width: 1px; height: 64%; background: #eef0f3;
+    }
+    .stat-3 .k { font-size: 12px; color: #8b93a0; }
+    .stat-3 .v { font-size: 20px; font-weight: 800; margin-top: 8px; color: #1c2430; }
+    .i-tip {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 14px; height: 14px; margin-left: 3px; padding: 0; border: 1px solid #c5cad3;
+      border-radius: 50%; font-size: 9px; line-height: 1; color: #c5cad3; vertical-align: 1px;
+      background: none; cursor: pointer;
+    }
+    .tip-mask {
+      display: none; position: absolute; inset: 0; z-index: 120;
+      background: rgba(15, 23, 42, 0.4); align-items: center; justify-content: center; padding: 24px;
+    }
+    .tip-mask.open { display: flex; }
+    .tip-box {
+      width: 100%; background: #fff; border-radius: 14px; padding: 18px 16px 14px;
+      box-shadow: 0 12px 32px rgba(0,0,0,.16);
+    }
+    .tip-box h3 { font-size: 16px; margin-bottom: 8px; }
+    .tip-box p { font-size: 13px; color: #4b5563; line-height: 1.6; }
+    .tip-box button {
+      margin-top: 14px; width: 100%; height: 40px; border: none; border-radius: 10px;
+      background: #ff5a2d; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+    .kyc-mask {
+      display: none; position: absolute; inset: 0; z-index: 90;
+      background: rgba(15, 23, 42, 0.52); align-items: center; justify-content: center;
+      padding: 18px 12px 24px;
+    }
+    .kyc-mask.open { display: flex; }
+    .kyc-sheet {
+      width: 100%; max-height: 88%; overflow-y: auto; background: #fff;
+      border-radius: 16px; padding: 18px 16px 16px;
+    }
+    .kyc-sheet h3 { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
+    .kyc-sheet .sub { font-size: 13px; color: #4b5563; line-height: 1.55; margin-bottom: 10px; }
+    .kyc-policy {
+      background: #fff7f3; border: 1px solid #ffd7c4; border-radius: 12px; padding: 12px;
+      margin-bottom: 12px;
+    }
+    .kyc-tag {
+      display: inline-block; font-size: 11px; font-weight: 700; color: #c2410c;
+      background: #ffedd5; padding: 2px 8px; border-radius: 999px; margin-bottom: 8px;
+    }
+    .kyc-policy p { font-size: 12px; color: #7c2d12; line-height: 1.65; }
+    .kyc-opt {
+      display: flex; align-items: flex-start; gap: 10px; width: 100%; text-align: left;
+      padding: 12px; margin-bottom: 8px; border: 1px solid #ececec; border-radius: 12px;
+      background: #fff; cursor: pointer; font-size: 13px; color: #1c2430;
+    }
+    .kyc-opt.active { border-color: #ff5a2d; background: #fff7f3; }
+    .kyc-opt b { display: block; margin-bottom: 2px; }
+    .kyc-opt span { font-size: 12px; color: #8b93a0; line-height: 1.45; }
+    .kyc-check {
+      display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: #374151;
+      line-height: 1.5; margin: 4px 0 12px;
+    }
+    .kyc-check input { margin-top: 3px; }
+    .proto-link {
+      display: inline; border: none; background: none; padding: 0; margin: 0;
+      color: #ff5a2d; font-weight: 700; font-size: inherit; line-height: inherit;
+      vertical-align: baseline; cursor: pointer;
+    }
+    .kyc-ok {
+      width: 100%; height: 46px; border: none; border-radius: 12px;
+      background: linear-gradient(90deg, #ff7a45, #ff4d2d); color: #fff;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    .kyc-ok[disabled] { opacity: .45; cursor: not-allowed; }
+    .kyc-actions { display: flex; flex-direction: column; gap: 8px; }
+    .kyc-cancel {
+      width: 100%; height: 42px; border: none; border-radius: 12px;
+      background: #f3f4f6; color: #6b7280; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .kyc-sheet.notice-sheet {
+      padding: 12px 14px 12px; max-height: 90%; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .notice-body { overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+    .notice-foot { flex-shrink: 0; padding-top: 10px; }
+    .notice-hero {
+      text-align: center; background: linear-gradient(180deg, #fff1ea 0%, #fff 78%);
+      border: 1px solid #ffe0d0; border-radius: 14px; padding: 14px 10px 12px; margin-bottom: 12px;
+    }
+    .notice-hero h3 { font-size: 17px; font-weight: 800; margin: 2px 0 4px; }
+    .notice-hero .sub { margin: 0; font-size: 12px; color: #6b7280; }
+    .notice-pros { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 10px; }
+    .notice-pros span {
+      font-size: 11px; font-weight: 700; color: #047857; background: #ecfdf5;
+      border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 999px;
+    }
+    .notice-sec {
+      font-size: 12px; font-weight: 800; color: #1c2430; margin: 0 2px 8px; letter-spacing: 0.02em;
+    }
+    .notice-card {
+      display: grid; grid-template-columns: 58px 1fr; gap: 10px; align-items: center;
+      background: #fff; border: 1px solid #ececec; border-radius: 12px;
+      padding: 10px; margin-bottom: 8px;
+    }
+    .notice-card .illu {
+      width: 58px; height: 58px; border-radius: 14px; background: #fff7f3;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .notice-card .illu svg { width: 52px; height: 52px; }
+    .notice-card b { display: block; font-size: 13px; margin-bottom: 3px; color: #1c2430; }
+    .notice-card p { font-size: 12px; color: #6b7280; line-height: 1.55; margin: 0; }
+    .sec-title { font-size: 16px; font-weight: 800; margin: 4px 4px 12px; }
+    .sec-head { margin: 4px 4px 12px; }
+    .sec-head .sec-title { margin: 0 0 4px; }
+    .rec-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      margin: 4px 4px 12px;
+    }
+    .rec-head .sec-title { margin: 0; flex-shrink: 0; }
+    .wd-kind {
+      height: 32px; border: 1px solid #ececec; border-radius: 8px; padding: 0 8px;
+      font-size: 13px; font-weight: 700; background: #fff; color: #1c2430;
+    }
+    .rec-sum-line { margin: -6px 4px 12px; font-size: 12px; color: #8b93a0; }
+    .rec-sum-line b { display: block; margin-top: 2px; font-size: 20px; font-weight: 800; color: #111; }
+    .sec-hint { font-size: 12px; color: #9aa3af; font-weight: 400; line-height: 1.45; }
+    .rec { background: #fff; border-radius: 16px; padding: 16px 14px; margin-bottom: 10px; }
+    .rec-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .rec-title { font-size: 15px; font-weight: 800; line-height: 1.4; min-width: 0; }
+    .rec-amt { font-size: 20px; font-weight: 800; white-space: nowrap; }
+    .rec-mid { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; color: #9aa3af; gap: 8px; flex-wrap: wrap; }
+    .rec-lines { margin-top: 8px; font-size: 12px; color: #9aa3af; line-height: 1.75; }
+    .toast {
+      position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%);
+      background: #1c2430; color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 13px;
+      opacity: 0; pointer-events: none; z-index: 30; white-space: nowrap; max-width: 86%;
+    }
+    .toast.show { opacity: 1; }
+    .wd-page { background: #f3f5f8; min-height: 100%; padding: 8px 16px 28px; }
+    .acct-row { padding: 10px 4px 16px; width: 100%; border: none; background: none; text-align: left; cursor: pointer; }
+    .acct-k { font-size: 13px; color: #9aa3af; }
+    .acct-v { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 18px; font-weight: 800; }
+    .acct-v .chev { color: #c5cad3; font-weight: 400; font-size: 20px; }
+    .amt-card { background: #fff; border-radius: 16px; padding: 16px 16px 12px; }
+    .amt-lab { font-size: 15px; font-weight: 800; }
+    .amt-line { display: flex; align-items: center; gap: 8px; margin-top: 18px; padding-bottom: 14px; border-bottom: 1px solid #eef0f3; }
+    .yen { font-size: 28px; font-weight: 800; }
+    .amt-line input { flex: 1; border: none; outline: none; font-size: 28px; font-weight: 800; min-width: 0; }
+    .all-btn { border: none; background: none; color: #ff6b4a; font-size: 15px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+    .avail-line { padding-top: 12px; font-size: 13px; color: #9aa3af; }
+    .split-mini { margin-top: 8px; font-size: 12px; color: #b0b6c0; line-height: 1.55; }
+    .ok-btn {
+      margin-top: 18px; width: 100%; height: 48px; border: none; border-radius: 12px;
+      background: linear-gradient(90deg, #ff7a45, #ff4d2d); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
+    }
+    .inc-head { padding: 4px 16px 10px; background: #f7f8fa; }
+    .inc-sum { display: flex; justify-content: space-between; align-items: baseline; }
+    .inc-sum .lab { font-size: 14px; color: #6b7280; }
+    .inc-sum .val { color: #ff5a2d; font-weight: 800; }
+    .inc-sum .more { font-size: 13px; color: #6b7280; }
+    .inc-sub { margin-top: 6px; font-size: 12px; color: #9aa3af; }
+    .inc-card { background: #fff; border-radius: 12px; padding: 14px; margin: 0 12px 10px; }
+    .inc-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+    .inc-title { font-size: 15px; font-weight: 800; line-height: 1.4; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .inc-plus { color: #ff5a2d; font-size: 18px; font-weight: 800; white-space: nowrap; }
+    .inc-mid { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; color: #9aa3af; }
+    .inc-body { margin-top: 8px; font-size: 13px; color: #8b93a0; line-height: 1.55; }
+    .inc-tax { color: #64748b; }
+    .inc-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: #9aa3af; }
+    .inc-st { display: inline-flex; align-items: center; gap: 4px; }
+    .inc-st.st-paid { color: #22c55e; }
+    .inc-st.st-taxing { color: #f59e0b; }
+    .inc-st.st-failed { color: #ef4444; }
+    .inc-st .i-tip { border-color: #ef4444; color: #ef4444; }
+    .home-bg {
+      background: linear-gradient(180deg, #ff6a3d 0%, #ff8a55 42%, #f6f7f9 42%);
+      min-height: 100%; padding-bottom: 24px;
+    }
+    .home-hero { padding: 0; }
+    .hero-k { font-size: 13px; opacity: .92; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .hero-k .shield { font-size: 11px; background: rgba(255,255,255,.18); padding: 2px 8px; border-radius: 999px; }
+    .today-tag {
+      font-size: 11px; background: rgba(255,255,255,.2); padding: 2px 8px; border-radius: 999px;
+      font-weight: 600;
+    }
+    .hero-card {
+      margin: 4px 16px 0; background: #fff; border-radius: 16px; padding: 16px 14px 14px; color: #1c2430;
+    }
+    .hero-k { font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 6px; }
+    .hero-k .shield {
+      font-size: 11px; color: #c2410c; background: #fff7ed; padding: 2px 8px; border-radius: 999px;
+    }
+    .hero-top { display: flex; justify-content: space-between; align-items: center; }
+    .hero-detail { border: none; background: none; color: #9aa3af; font-size: 12px; cursor: pointer; }
+    .hero-v-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 6px 0 12px; }
+    .hero-v { font-size: 36px; font-weight: 800; letter-spacing: -1px; color: #111; margin: 0; }
+    .today-badge {
+      font-size: 11px; font-weight: 700; color: #ff5a2d; background: #fff1ea;
+      padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+    }
+    .tf-select {
+      width: 100%; height: 44px; border: 1px solid #ececec; border-radius: 12px;
+      padding: 0 12px; font-size: 15px; font-weight: 700; background: #fff; color: #1c2430;
+    }
+    .tf-pocket-row {
+      display: grid; grid-template-columns: 1fr 88px auto; gap: 8px; align-items: center;
+      padding: 12px 0; border-bottom: 1px solid #f3f4f6;
+    }
+    .tf-pockets .tf-pocket-row:last-child { border-bottom: none; }
+    .tf-pocket-row .nm { font-size: 13px; }
+    .tf-pocket-row .cap { font-size: 11px; color: #9aa3af; margin-top: 2px; }
+    .tf-pocket-row input {
+      width: 88px; border: none; border-bottom: 1px solid #eef0f3; outline: none;
+      font-size: 18px; font-weight: 800; text-align: right; background: transparent;
+    }
+    .tf-all {
+      border: none; background: none; color: #ff6b4a; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .id-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .id-opt {
+      display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+      padding: 12px; border: 1px solid #ececec; border-radius: 12px; background: #fff; cursor: pointer;
+    }
+    .id-opt.active { border-color: #ff5a2d; background: #fff7f3; }
+    .id-opt .meta { flex: 1; min-width: 0; }
+    .id-opt b { display: block; font-size: 14px; }
+    .id-opt span { font-size: 12px; color: #8b93a0; }
+    .id-opt .amt { font-size: 13px; font-weight: 800; color: #111; white-space: nowrap; }
+    .wd-total {
+      background: #fff; border-radius: 16px; padding: 16px 16px 14px; margin-top: 4px;
+    }
+    .wd-total .k { font-size: 13px; color: #6b7280; }
+    .wd-total .v { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; margin-top: 4px; color: #111; }
+    .kind-tag {
+      display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px;
+      font-size: 10px; font-style: normal; font-weight: 700; vertical-align: 1px; line-height: 1.4;
+    }
+    .kind-tag.kind-personal { background: #eff6ff; color: #2563eb; }
+    .kind-tag.kind-corp { background: #ecfdf5; color: #047857; }
+    .acct-drop { position: relative; }
+    .acct-drop.open { z-index: 4; }
+    .acct-face {
+      width: 100%; min-height: 52px; border: 1px solid #ececec; border-radius: 12px;
+      background: #fff; padding: 8px 12px; text-align: left; cursor: pointer;
+      display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 8px;
+    }
+    .acct-drop.open .acct-face { border-color: #ff5a2d; }
+    .drop-main { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .drop-main b { font-size: 14px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .drop-main .kind-tag { margin-left: 0; flex-shrink: 0; }
+    .drop-no { display: block; margin-top: 2px; font-size: 12px; color: #8b93a0; font-weight: 500; }
+    .drop-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .drop-bal { font-size: 13px; font-weight: 800; color: #111; white-space: nowrap; flex-shrink: 0; }
+    .drop-ph { color: #9aa3af; font-size: 15px; font-weight: 700; }
+    .acct-face > :first-child { grid-column: 1; grid-row: 1; min-width: 0; }
+    .drop-chev { color: #9aa3af; font-size: 12px; grid-column: 2; grid-row: 1; justify-self: end; align-self: center; }
+    .acct-menu {
+      position: absolute; left: 0; right: 0; top: calc(100% + 6px);
+      background: #fff; border: 1px solid #ececec; border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(16, 24, 40, .12); overflow: hidden;
+    }
+    .acct-opt {
+      display: block; width: 100%; border: none; border-bottom: 1px solid #f3f4f6;
+      background: #fff; padding: 10px 12px; text-align: left; cursor: pointer;
+    }
+    .acct-opt:last-child { border-bottom: none; }
+    .acct-opt.on { background: #fff7f3; }
+    .notice-slot {
+      margin-top: 14px; padding: 12px 4px 8px;
+      color: #8b93a0; font-size: 12px; line-height: 1.7;
+    }
+    .sec-lab { font-size: 13px; font-weight: 700; margin: 14px 4px 6px; }
+    .hero-3 {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; text-align: left;
+    }
+    .hero-3 .k { font-size: 11px; color: #9aa3af; }
+    .hero-3 .v { font-size: 15px; font-weight: 800; margin-top: 4px; }
+    .hero-3 .v.up { color: #ff4d2d; }
+    .hero-actions, .card-actions {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px;
+    }
+    .btn-line, .btn-fill {
+      height: 40px; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    .btn-line { border: 1px solid #ffd0c0; background: #fff; color: #ff5a2d; }
+    .btn-fill { border: none; background: linear-gradient(90deg, #ff7a45, #ff4d2d); color: #fff; }
+    .home-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 46px 16px 2px; color: #fff;
+    }
+    .home-nav .side {
+      width: 36px; height: 32px; border: none; background: none; color: inherit; font-size: 22px; cursor: pointer;
+    }
+    .home-nav .rule-link {
+      border: none; background: none; color: #fff; font-size: 15px; font-weight: 400; cursor: pointer;
+    }
+    .detail-tabs {
+      display: flex; gap: 0; margin: 0 12px 10px; background: #eceef2; border-radius: 10px; padding: 3px;
+    }
+    .detail-tabs button {
+      flex: 1; height: 32px; border: none; border-radius: 8px; background: transparent;
+      font-size: 13px; color: #6b7280; cursor: pointer;
+    }
+    .detail-tabs button.active { background: #fff; color: #111; font-weight: 700; }
+    .w-card {
+      margin: 12px 16px 0; background: #fff; border-radius: 16px; padding: 14px;
+    }
+    .w-card .top { display: flex; justify-content: space-between; align-items: center; }
+    .w-card h2 { font-size: 15px; font-weight: 800; }
+    .link-muted { border: none; background: none; color: #9aa3af; font-size: 12px; cursor: pointer; }
+    .w-total { margin-top: 10px; font-size: 12px; color: #9aa3af; }
+    .w-total b { font-size: 28px; color: #111; font-weight: 800; margin-right: 8px; }
+    .w-foot { display: flex; justify-content: space-between; margin-top: 12px; font-size: 12px; color: #9aa3af; }
+    .today-mini { font-size: 11px; color: #ff5a2d; font-weight: 700; margin-left: 6px; }
+    .tool-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .tool-bar button {
+      height: 32px; padding: 0 12px; border-radius: 8px; border: 1px dashed #ffc9b0;
+      background: #fff7f3; color: #c2410c; font-size: 12px; cursor: pointer;
+    }
+    .book-card { background: #fff; border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+    .book-card h3 { font-size: 14px; margin-bottom: 8px; }
+    .book-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid #f3f4f6; }
+    .book-row:last-child { border-bottom: none; }
+    .warn { color: #b45309; font-size: 12px; line-height: 1.5; margin-top: 8px; }
+    .pill { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 999px; background: #fff7ed; color: #c2410c; margin-left: 4px; }
+    .pill.ok { background: #ecfdf5; color: #047857; }
+    body.embed-mode { background: var(--bg); }
+    body.embed-mode .demo-header, body.embed-mode .demo-nav, body.embed-mode .mode-nav { display: none !important; }
+    body.embed-mode .demo-shell { padding: 0; min-height: 100vh; }
+    body.embed-mode .phone-frame { width: 100%; max-width: 100%; height: 100vh; border-radius: 0; box-shadow: none; }
+    body.embed-mode .phone-notch { display: none; }
+    body.embed-mode .nav { padding-top: 12px; }
+    body.embed-mode .home-nav { padding-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="demo-shell">
+    <div class="demo-header">
+      <h1>钱包优化 · 待划转 / 可提现两步</h1>
+      <p>打款进分口袋待划转。划转页顶部下拉选账户（不展示实名金额），各钱包自定义金额。提现页列表才展示该账户可提现。</p>
+      <div class="mode-nav" id="modeNav"></div>
+      <div class="demo-nav" id="sceneNav"></div>
+      <div class="tool-bar">
+        <button type="button" data-act="sim-credit">模拟新结算 +1.35（项目）</button>
+        <button type="button" data-act="reset">重置账本</button>
+      </div>
+    </div>
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <section class="screen" id="screen-home"></section>
+      <section class="screen" id="screen-transfer"></section>
+      <section class="screen" id="screen-withdraw"></section>
+      <section class="screen" id="screen-records"></section>
+      <section class="screen" id="screen-income"></section>
+      <section class="screen" id="screen-books"></section>
+      <div class="toast" id="toast"></div>
+      <div class="tip-mask" id="tipMask">
+        <div class="tip-box">
+          <h3 id="tipTitle">说明</h3>
+          <p id="tipBody"></p>
+          <button type="button" data-act="close-tip">我知道了</button>
+        </div>
+      </div>
+      <div class="kyc-mask" id="kycMask"></div>
+      <div class="kyc-mask" id="noticeMask"></div>
+    </div>
+  </div>
+  <script>
+    var CUTOVER = '2026-09-01';
+    var KEYS = [
+      { id: 'project', name: '项目收益钱包', short: '项目' },
+      { id: 'team', name: '团队奖励钱包', short: '团队' },
+      { id: 'activity', name: '平台活动钱包', short: '活动' }
+    ];
+    function cloneInit() {
+      return {
+        mode: 'after',
+        income: { project: 180.00, team: 12.50, activity: 4.19 },
+        today: { project: 0, team: 0, activity: 0 },
+        legacy: { project: 80.60, team: 12.00, activity: 4.00 },
+        pendingTransfer: { project: 80.60, team: 12.00, activity: 4.00 },
+        transferWallet: 'project',
+        tfAmt: { project: 0, team: 0, activity: 0 },
+        tfAcctOpen: false,
+        wdAcctOpen: false,
+        recordsTab: 'transfer',
+        noticeSeen: false,
+        transfers: [
+          {
+            cert: 'id1', name: '张三', no: '3301**********1234',
+            amt: 48.00, tax: 0.48, net: 47.52, after: 80.09,
+            split: { project: 40.00, team: 8.00, activity: 0 },
+            time: '2026-09-21 18:20:11', status: 'paid'
+          },
+          {
+            cert: 'id1', name: '张三', no: '3301**********1234',
+            amt: 10.00, tax: 0.10, net: 0, after: 80.09,
+            split: { project: 10.00, team: 0, activity: 0 },
+            time: '2026-09-22 09:04:32', status: 'taxing'
+          },
+          {
+            cert: 'id2', name: '张三', no: '1101**********8899',
+            amt: 6.00, tax: 0.06, net: 0, after: 20.00,
+            split: { project: 6.00, team: 0, activity: 0 },
+            time: '2026-09-20 14:11:08', status: 'failed',
+            failReason: '云账户应税失败，待划转未扣减，可提现未增加。'
+          }
+        ],
+        pending: { project: 8.00, team: 0, activity: 0 },
+        accountSelected: false,
+        incomeWallet: 'project',
+        detailScope: 'wallet',
+        detailTab: 'income',
+        wdKindFilter: 'all',
+        records: [
+          { title: '提现到建设银行**** 8135', amt: 80.09, tax: 0, id: '202609201546008813501', apply: '2026.09.20 15:46:00', paid: '2026.09.20 16:10:00', split: { project: 0, team: 0, activity: 0, unified: 80.09 }, userName: '张三', userNo: '3301**********1234', cert: 'id1', payType: 'personal', status: 'paid' },
+          { title: '提现到对公账户', amt: 15.00, tax: 0, id: '202609181030002X', apply: '2026.09.18 10:30:00', paid: '2026.09.18 11:05:00', split: { project: 0, team: 0, activity: 0, unified: 15.00 }, userName: '杭州右豹文化传媒有限公司', userNo: '913301**********2X', cert: 'id3', payType: 'corp', status: 'paid' },
+          { title: '提现到支付宝**** **** **** 2707', amt: 2.27, tax: 0, id: '202505211212346819547560188', apply: '2025.05.21 12:12:34', paid: '2025.05.22 12:36:36', split: { project: 2.27, team: 0, activity: 0, unified: 0 }, userName: '张三', userNo: '3301**********1234' },
+          { title: '提现到支付宝**** **** **** 2707', amt: 193.72, tax: 0, id: '2025031514070005085536560188', apply: '2025.03.15 14:07:00', paid: '2025.03.16 14:31:02', split: { project: 193.72, team: 0, activity: 0, unified: 0 }, userName: '张三', userNo: '3301**********1234' },
+          { title: '提现到**** **** **** 2707', amt: 0.10, tax: 0, id: '202501010022115142065560188', apply: '2025.01.01 00:22:11', paid: '2025.01.02 00:46:13', split: { project: 0.10, team: 0, activity: 0, unified: 0 }, userName: '张三', userNo: '1101**********8899' }
+        ],
+        incomes: [
+          { wallet: 'project', name: '百度网盘', amt: 1.35, tax: 0.01, net: 1.34, after: 180.00, time: '2026-09-17 11:52:25', status: 'paid', desc: '「百度网盘」打款周期2026-09-16收益到账(关键词「云盘结算」)于2026-09-17 11:52:25结算到账收益1.35元' },
+          { wallet: 'project', name: '夸克网盘', amt: 0.47, tax: 0.01, net: 0, after: 178.65, time: '2026-09-17 03:01:34', status: 'taxing', desc: '「夸克网盘」打款周期2026-09-16收益到账(关键词「100253691479」)于2026-09-17 03:01:34结算到账收益0.47元' },
+          { wallet: 'project', name: '迅雷搜索', amt: 8.00, tax: 0.06, net: 0, after: 178.65, time: '2026-09-16 13:31:22', status: 'failed', failReason: '税务校验未通过，收益未入账。', desc: '「迅雷搜索」打款周期2026-09-15收益到账(关键词「2197771875」)于2026-09-16 13:31:22结算到账收益8元' },
+          { wallet: 'project', name: '历史项目收益', amt: 80.60, tax: 0.60, net: 80.00, after: 178.18, time: '2026-08-20 18:00:00', status: 'paid', desc: '切点前：收益与余额都记在项目钱包。该笔对应的税后余额已冻结在旧库存。' },
+          { wallet: 'team', name: '团队奖励', amt: 12.50, tax: 0.10, net: 12.40, after: 12.50, time: '2026-08-12 09:10:00', status: 'paid', desc: '切点前团队钱包分别入账。' },
+          { wallet: 'activity', name: '活动奖励', amt: 4.19, tax: 0.03, net: 4.16, after: 4.19, time: '2026-08-08 12:00:00', status: 'paid', desc: '切点前活动钱包分别入账。' }
+        ],
+        kyc: {
+          case: 'single',
+          done: true,
+          taxAgreed: false,
+          agreeChecked: false,
+          showModal: false,
+          cert: 'personal',
+          pick: '',
+          ids: [
+            { key: 'id1', name: '张三', no: '3301**********1234', type: 'personal', withdrawable: 80.09 },
+            { key: 'id2', name: '张三', no: '1101**********8899', type: 'personal', withdrawable: 20.00 },
+            { key: 'id3', name: '杭州右豹文化传媒有限公司', no: '913301**********2X', type: 'corp', withdrawable: 15.00 }
+          ]
+        }
+      };
+    }
+    var S = cloneInit();
+    var amountInput = 0;
+    var SCENES = [
+      { id: 'home', label: '钱包首页' },
+      { id: 'home-notice', label: '弹窗·改版公告' },
+      { id: 'transfer', label: '划转页' },
+      { id: 'withdraw', label: '提现页' },
+      { id: 'records-tf', label: '划转明细' },
+      { id: 'records-wd', label: '提现明细' },
+      { id: 'income', label: '查看明细' },
+      { id: 'books', label: '账本对照' },
+      { id: 'kyc-tax', label: '弹窗·应税同意' }
+    ];
+    var COPY = {
+      popupHighlightTag: '先算税、后提现',
+      popupHighlight: '依据国家税务总局最新要求，自2026年10月1日起，非对公合作用户个人所得税的纳税义务发生时点将调整为到达用户真实可提现钱包账户且用户可自主提现时点(即余额入账时点)。平台将在订单收益余额入账后，用户进行余额划转时为用户计算并扣除税款，平台或您的财税服务商将于金额入账次月为您代办相关税金申报。',
+      agreementName: '用户余额划转协议',
+      agreementBody: '此处预留《用户余额划转协议》正文。',
+      transferFoot: '依据国家税务总局最新要求，自2026年10月1日起，非对公合作用户个人所得税的纳税义务发生时点将调整为到达用户真实可提现钱包账户且用户可自主提现时点(即余额入账时点)。平台将在订单收益余额入账后，用户进行余额划转时为用户计算并扣除税款，平台或您的财税服务商将于金额入账次月为您代办相关税金申报。',
+      withdrawFoot: '提现不再扣税。'
+    };
+    function cfg(s) { return String(s || '').trim(); }
+    function noticeSlot(text) {
+      var t = cfg(text);
+      return t ? '<p class="notice-slot">' + t + '</p>' : '';
+    }
+    function isCorpCert() {
+      var c = selectedCert();
+      return (c && c.type === 'corp') || S.kyc.cert === 'corp' || S.kyc.case === 'corp';
+    }
+    function selectedCert() {
+      return (S.kyc.ids || []).filter(function (x) { return x.key === S.kyc.pick; })[0] || null;
+    }
+    function certAvail() {
+      var c = selectedCert();
+      return c ? r2(c.withdrawable || 0) : 0;
+    }
+    function allAvail() {
+      return (S.kyc.ids || []).reduce(function (a, c) { return r2(a + (c.withdrawable || 0)); }, 0);
+    }
+    function waitSum() {
+      return r2(S.pendingTransfer.project + S.pendingTransfer.team + S.pendingTransfer.activity);
+    }
+    function avail() {
+      return allAvail();
+    }
+    function kycNeedGate() {
+      return !!S.kyc.showModal;
+    }
+    function noticeNeedGate() {
+      return !S.noticeSeen;
+    }
+    function hideNotice() {
+      var mask = document.getElementById('noticeMask');
+      if (!mask) return;
+      mask.classList.remove('open');
+      mask.innerHTML = '';
+    }
+    function svgMerge() {
+      return '<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+        '<rect x="6" y="10" width="14" height="12" rx="3" fill="#ffd7c4"/>' +
+        '<rect x="10" y="18" width="14" height="12" rx="3" fill="#ffb089"/>' +
+        '<rect x="14" y="26" width="14" height="12" rx="3" fill="#ff7a45"/>' +
+        '<path d="M30 26 h8" stroke="#16a34a" stroke-width="2"/>' +
+        '<path d="M36 22 l6 4 -6 4" fill="#16a34a"/>' +
+        '<circle cx="46" cy="26" r="9" fill="#dcfce7" stroke="#16a34a"/>' +
+        '<text x="46" y="29" text-anchor="middle" font-size="8" fill="#15803d" font-weight="700">1</text></svg>';
+    }
+    function svgTransfer() {
+      return '<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+        '<rect x="5" y="14" width="18" height="24" rx="4" fill="#fff" stroke="#ff7a45"/>' +
+        '<rect x="8" y="18" width="12" height="5" rx="1.5" fill="#ffe0d0"/>' +
+        '<path d="M26 26 h8" stroke="#ff7a45" stroke-width="2"/>' +
+        '<path d="M32 22 l6 4 -6 4" fill="#ff7a45"/>' +
+        '<rect x="30" y="12" width="18" height="28" rx="4" fill="#eff6ff" stroke="#2563eb"/>' +
+        '<circle cx="39" cy="22" r="4" fill="#bfdbfe"/>' +
+        '<rect x="34" y="29" width="10" height="3" rx="1" fill="#93c5fd"/>' +
+        '</svg>';
+    }
+    function svgTax() {
+      return '<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+        '<rect x="8" y="10" width="22" height="28" rx="4" fill="#fff" stroke="#d97706"/>' +
+        '<text x="19" y="27" text-anchor="middle" font-size="9" fill="#b45309" font-weight="700">税</text>' +
+        '<path d="M32 24 h8" stroke="#16a34a" stroke-width="2"/>' +
+        '<circle cx="44" cy="24" r="8" fill="#dcfce7" stroke="#16a34a"/>' +
+        '<path d="M40 24 l3 3 6-7" fill="none" stroke="#15803d" stroke-width="1.8"/>' +
+        '</svg>';
+    }
+    function renderNotice() {
+      var mask = document.getElementById('noticeMask');
+      if (!mask) return;
+      if (!noticeNeedGate()) {
+        hideNotice();
+        return;
+      }
+      mask.innerHTML = '<div class="kyc-sheet notice-sheet"><div class="notice-body">' +
+        '<div class="notice-hero">' +
+        '<h3>钱包改版公告</h3>' +
+        '<p class="sub">提现改成两步：先划转到认证账户，再一次性提现。税在划转时扣完。</p>' +
+        '<div class="notice-pros"><span>一次提现</span><span>可部分划转</span><span>提现不再扣税</span></div></div>' +
+        '<div class="notice-sec">新版本优势</div>' +
+        '<div class="notice-card"><div class="illu">' + svgMerge() + '</div><div>' +
+        '<b>三个钱包，一次提走</b>' +
+        '<p>不用再分别点项目 / 团队 / 活动三个提现。划转后在首页点一次「提现」即可。</p></div></div>' +
+        '<div class="notice-sec">你需要知道</div>' +
+        '<div class="notice-card"><div class="illu">' + svgTransfer() + '</div><div>' +
+        '<b>先划转，再合并提现</b>' +
+        '<p>各钱包「可划转余额」先转到你的认证账户（个人或对公）。可只划一部分。成功后进入该账户可提现。</p></div></div>' +
+        '<div class="notice-card"><div class="illu">' + svgTax() + '</div><div>' +
+        '<b>国税要求：提现前扣税</b>' +
+        '<p>税款改在你点「确认划转」时由平台计算并扣除，税后金额才进入可提现。之后提现不再扣税。</p></div></div>' +
+        '</div><div class="notice-foot"><button class="kyc-ok" type="button" data-act="notice-ok">我知道了</button></div></div>';
+      mask.classList.add('open');
+    }
+    function kycNoticeHtml() {
+      var tag = cfg(COPY.popupHighlightTag);
+      var body = cfg(COPY.popupHighlight);
+      if (!tag && !body) return '';
+      return '<div class="kyc-policy">' +
+        (tag ? '<div class="kyc-tag">' + tag + '</div>' : '') +
+        (body ? '<p>' + body + '</p>' : '') +
+        '</div>';
+    }
+    function renderKyc() {
+      var mask = document.getElementById('kycMask');
+      if (!kycNeedGate()) {
+        mask.classList.remove('open');
+        mask.innerHTML = '';
+        return;
+      }
+      var agreeName = cfg(COPY.agreementName);
+      var can = !agreeName || !!S.kyc.agreeChecked;
+      var agreeLine = agreeName
+        ? '<label class="kyc-check"><input type="checkbox" data-act="kyc-agree" ' + (can ? 'checked' : '') +
+          ' /><span>我已阅读并同意<button type="button" class="proto-link" data-act="open-proto">《' + agreeName + '》</button></span></label>'
+        : '';
+      mask.innerHTML = '<div class="kyc-sheet"><h3>请阅读相关协议并同意</h3>' +
+        kycNoticeHtml() +
+        agreeLine +
+        '<div class="kyc-actions">' +
+        '<button class="kyc-ok" type="button" data-act="kyc-ok"' + (can ? '' : ' disabled') + '>确认并划转</button>' +
+        '<button class="kyc-cancel" type="button" data-act="kyc-cancel">暂不同意</button></div></div>';
+      mask.classList.add('open');
+    }
+
+    function r2(n) { return Math.round(Number(n) * 100) / 100; }
+    function money(n) {
+      return r2(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function toast(t) {
+      var el = document.getElementById('toast');
+      el.textContent = t;
+      el.classList.add('show');
+      setTimeout(function () { el.classList.remove('show'); }, 1800);
+    }
+    function go(id) { showScreen(id); }
+    function post(id) {
+      if (window.parent !== window) window.parent.postMessage({ type: 'walletScreen', screen: id }, '*');
+    }
+    function legacySum() { return r2(S.legacy.project + S.legacy.team + S.legacy.activity); }
+    function incomeSum() {
+      return r2(S.income.project + S.income.team + S.income.activity);
+    }
+    function todaySum() {
+      return r2(S.today.project + S.today.team + S.today.activity);
+    }
+    function pendingSum() {
+      return r2(S.pending.project + S.pending.team + S.pending.activity);
+    }
+    function withdrawnSum() {
+      return S.records.reduce(function (a, r) { return r2(a + r.amt); }, 0);
+    }
+    function isMergedWithdraw(r) {
+      return !!(r && r.split && r2(r.split.unified || 0) > 0);
+    }
+    function mergedRecords() {
+      return S.records.filter(isMergedWithdraw);
+    }
+    function recordsForWallet(id) {
+      return S.records.filter(function (r) {
+        return r.split && r2(r.split[id] || 0) > 0 && !isMergedWithdraw(r);
+      });
+    }
+    function recordPayKind(r) {
+      if (r && (r.payType === 'corp' || r.payType === 'personal')) return r.payType;
+      var c = certByKey(r && r.cert);
+      return c && c.type === 'corp' ? 'corp' : 'personal';
+    }
+    function filterWdKind(rows) {
+      var kind = S.wdKindFilter || 'all';
+      if (kind === 'all') return rows;
+      return rows.filter(function (r) { return recordPayKind(r) === kind; });
+    }
+    function summaryWdHead(rows) {
+      var kind = S.wdKindFilter || 'all';
+      function opt(value, label) {
+        return '<option value="' + value + '"' + (kind === value ? ' selected' : '') + '>' + label + '</option>';
+      }
+      return '<div class="rec-head"><div class="sec-title">提现记录</div>' +
+        '<select class="wd-kind" data-act="wd-kind" aria-label="筛选提现方式">' +
+        opt('all', '全部') + opt('personal', '个人') + opt('corp', '对公') +
+        '</select></div>' +
+        '<div class="rec-sum-line">累计成功提现金额<b>' + money(successWdSum(rows)) + '</b></div>';
+    }
+    function splitAmount(amt) {
+      var left = r2(amt);
+      var order = S.mode === 'before'
+        ? ['project', 'team', 'activity']
+        : ['project', 'team', 'activity', 'unified'];
+      var out = { project: 0, team: 0, activity: 0, unified: 0 };
+      order.forEach(function (k) {
+        var pocket = k === 'unified' ? S.unified : S.legacy[k];
+        var take = Math.min(left, pocket);
+        out[k] = r2(take);
+        left = r2(left - take);
+      });
+      out.left = left;
+      return out;
+    }
+    function navBar(title, backAct, light) {
+      return '<div class="nav' + (light ? ' light' : '') + '">' +
+        '<button class="side" type="button" data-act="' + backAct + '">‹</button>' +
+        '<h1>' + title + '</h1>' +
+        '<div class="capsule"><span>···</span><span>－</span><i></i></div></div>';
+    }
+    function acctLabel() {
+      return S.accountSelected ? '建设银行 **** 8135' : '请选择到账方式';
+    }
+    function renderHome() {
+      var cards = KEYS.map(function (w) {
+        return '<article class="w-card"><div class="top"><h2>' + w.name + '</h2>' +
+          '<button class="link-muted" type="button" data-act="income" data-scope="wallet" data-wallet="' + w.id + '">查看明细 ›</button></div>' +
+          '<div class="w-total">总收入(元)<br><b>' + money(S.income[w.id]) + '</b></div>' +
+          '<div class="w-foot"><span>可划转余额 · ' + money(S.pendingTransfer[w.id]) + '</span><span>已确认待入款 · ' + money(S.pending[w.id]) + '</span></div></article>';
+      }).join('');
+      return '<div class="scroll home-bg">' +
+        '<div class="home-nav"><button class="side" type="button" data-act="noop">‹</button>' +
+        '<button class="rule-link" type="button" data-act="noop">规则说明</button></div>' +
+        '<div class="hero-card"><div class="hero-top"><div class="hero-k">钱包总收入(元) <span class="shield">安全保障中</span></div>' +
+        '<button class="hero-detail" type="button" data-act="income" data-scope="summary">查看明细 ›</button></div>' +
+        '<div class="hero-v-row"><div class="hero-v">' + money(incomeSum()) + '</div>' +
+        '<span class="today-badge">今日+' + money(todaySum()) + '</span></div>' +
+        '<div class="hero-3"><div><div class="k">可划转余额</div><div class="v">' + money(waitSum()) +
+        '</div></div><div><div class="k">可提现总额</div><div class="v">' + money(allAvail()) +
+        '</div></div><div><div class="k">提现账户</div><div class="v">' + S.kyc.ids.length + '个 ›</div></div></div>' +
+        '<div class="hero-actions">' +
+        '<button class="btn-line" type="button" data-act="transfer">划转</button>' +
+        '<button class="btn-fill" type="button" data-act="withdraw">提现</button></div></div>' +
+        cards + '</div>';
+    }
+    function certKind(id) {
+      return id && id.type === 'corp' ? '对公' : '个人';
+    }
+    function kindTag(id) {
+      var k = certKind(id);
+      return '<em class="kind-tag kind-' + (k === '对公' ? 'corp' : 'personal') + '">' + k + '</em>';
+    }
+    function certFaceHtml(id, showBal) {
+      if (!id) return '<span class="drop-ph">请选择实名账户</span><span class="drop-chev">▾</span>';
+      var bal = showBal ? '<span class="drop-bal">余额:' + money(id.withdrawable || 0) + '</span>' : '';
+      return '<span><span class="drop-top"><span class="drop-main"><b>' + id.name + '</b>' + kindTag(id) + '</span>' + bal + '</span>' +
+        '<span class="drop-no">' + id.no + '</span></span><span class="drop-chev">▾</span>';
+    }
+    function certMenuHtml(open, pickAct, showBal) {
+      if (!open) return '';
+      return '<div class="acct-menu">' + S.kyc.ids.map(function (id) {
+        var on = S.kyc.pick === id.key;
+        var bal = showBal ? '<span class="drop-bal">余额:' + money(id.withdrawable || 0) + '</span>' : '';
+        return '<button type="button" class="acct-opt' + (on ? ' on' : '') + '" data-act="' + pickAct + '" data-pick="' + id.key + '">' +
+          '<span class="drop-top"><span class="drop-main"><b>' + id.name + '</b>' + kindTag(id) + '</span>' + bal + '</span>' +
+          '<span class="drop-no">' + id.no + '</span></button>';
+      }).join('') + '</div>';
+    }
+    function acctDropHtml(open, toggleAct, pickAct, showBal) {
+      return '<div class="acct-drop' + (open ? ' open' : '') + '">' +
+        '<button type="button" class="acct-face" data-act="' + toggleAct + '">' + certFaceHtml(selectedCert(), showBal) + '</button>' +
+        certMenuHtml(open, pickAct, showBal) + '</div>';
+    }
+    function wdCertSelectHtml() {
+      return acctDropHtml(!!S.wdAcctOpen, 'toggle-wd-acct', 'pick-wd-acct', true);
+    }
+    function certSelectHtml() {
+      return acctDropHtml(!!S.tfAcctOpen, 'toggle-tf-acct', 'pick-tf-acct', false);
+    }
+    function shownTf(id) {
+      var n = S.tfAmt[id];
+      return n > 0 ? String(n) : '';
+    }
+    function renderTransfer() {
+      var rows = KEYS.map(function (w) {
+        return '<div class="tf-pocket-row"><div><div class="nm">' + w.name + '</div>' +
+          '<div class="cap">可划转余额 ' + money(S.pendingTransfer[w.id]) + '</div></div>' +
+          '<input type="text" inputmode="decimal" data-tf="' + w.id + '" value="' + shownTf(w.id) + '" />' +
+          '<button class="tf-all" type="button" data-act="all-one" data-wallet="' + w.id + '">全部</button></div>';
+      }).join('');
+      var total = KEYS.reduce(function (a, w) { return r2(a + (S.tfAmt[w.id] || 0)); }, 0);
+      return navBar('划转', 'home', true) +
+        '<div class="scroll wd-page">' +
+        '<div class="sec-lab" style="margin-top:4px">选择实名账户</div>' +
+        certSelectHtml() +
+        '<div class="amt-card" style="margin-top:12px"><div class="amt-lab">各钱包划转金额</div>' +
+        '<div class="tf-pockets">' + rows + '</div>' +
+        '<div class="avail-line" id="tfSum">本次合计 ' + money(total) + ' / 可划转余额 ' + money(waitSum()) + '</div>' +
+        '<div class="split-mini">每个钱包可单独填写、可部分划转。确认后产生订单并调应税，税后进入所选账户可提现。</div></div>' +
+        '<button class="ok-btn" type="button" data-act="submit-tf">确认划转</button>' +
+        noticeSlot(COPY.transferFoot) + '</div>';
+    }
+    function renderWithdraw() {
+      var shown = amountInput > 0 ? String(amountInput) : '';
+      var c = selectedCert();
+      return navBar('提现', 'home', true) +
+        '<div class="scroll wd-page">' +
+        '<div class="wd-total"><div class="k">可提现总额(元)</div><div class="v">' + money(allAvail()) + '</div></div>' +
+        '<div class="sec-lab">选择实名账户</div>' +
+        wdCertSelectHtml() +
+        '<button type="button" class="acct-row" data-act="pick-ccb"><div class="acct-k">到账方式</div>' +
+        '<div class="acct-v"><span>' + acctLabel() + '</span><span class="chev">›</span></div></button>' +
+        '<div class="amt-card">' +
+        '<div class="amt-lab">提现金额</div>' +
+        '<div class="amt-line"><span class="yen">¥</span>' +
+        '<input id="amt" type="text" inputmode="decimal" value="' + shown + '" data-act="amt-keep" />' +
+        '<button class="all-btn" type="button" data-act="all-amt">全部</button></div>' +
+        '<div class="avail-line">该账户可提现 ' + (c ? money(c.withdrawable) : '--') + '</div>' +
+        '<div class="split-mini">先下拉选择实名账户（个人/对公用标签，选项含余额），再选到账方式。提现不再扣税。</div></div>' +
+        '<button class="ok-btn" type="button" data-act="submit-wd">确定</button>' +
+        noticeSlot(COPY.withdrawFoot) + '</div>';
+    }
+    var STAT_TIPS = {
+      'wd-total': { title: '累计提现', text: '本页累计已成功发起的提现金额。' },
+      'tf-total': { title: '累计已划转', text: '各钱包划出金额合计（税前）。' },
+      'tf-net': { title: '实际到账', text: '划转应税成功后进入所选实名账户可提现的金额。' },
+      'tf-tax': { title: '预扣税额', text: '划转时按国税要求扣除的税额合计。扣税中、失败单不计入实际到账。' },
+      'inc-settled': { title: '累计已结算', text: '本钱包已结算入账的收益合计（税前）。' },
+      'inc-net': { title: '实际到账', text: '扣税后实际进入可提现余额的金额。' },
+      'inc-tax': { title: '预扣税额', text: '根据国税总局要求，收益打款到账进行扣税。此处为累计已扣税额。' },
+      'wd-wallet-total': { title: '累计提现', text: '本钱包已发起的提现金额合计，含历史分钱包提现。' },
+      'wd-wallet-net': { title: '实际到账', text: '本钱包提现扣税后实际打款到账的金额合计。' },
+      'wd-wallet-tax': { title: '预扣税额', text: '本钱包提现时已扣除的税额合计。合并提现后新单不再扣税，税额记在划转。' }
+    };
+    function tipIcon(key) {
+      return '<button type="button" class="i-tip" data-act="stat-tip" data-tip="' + key + '">i</button>';
+    }
+    function certByKey(key) {
+      return (S.kyc.ids || []).filter(function (x) { return x.key === key; })[0] || null;
+    }
+    function certTag(item) {
+      if (item && item.name) return item.name + ' ' + (item.no || '');
+      var c = certByKey(item && item.cert);
+      return c ? (c.name + ' ' + c.no) : '--';
+    }
+    function splitTfDesc(split) {
+      var parts = KEYS.filter(function (w) { return r2((split && split[w.id]) || 0) > 0; })
+        .map(function (w) { return w.short + '钱包划转' + money(split[w.id]); });
+      return parts.length ? parts.join('，') : '--';
+    }
+    function tfStatusHtml(item) {
+      var st = item.status || 'paid';
+      var label = st === 'taxing' ? '扣税中' : st === 'failed' ? '划转失败' : '划转成功';
+      var icon = '';
+      if (st === 'failed') {
+        icon = '<button type="button" class="i-tip" data-act="fail-tip" data-reason="' +
+          String(item.failReason || '划转失败，请稍后重试').replace(/"/g, '') + '">i</button>';
+      }
+      return '<span class="inc-st st-' + st + '">' + label + icon + '</span>';
+    }
+    function recItem(r) {
+      var user = (r.userName || r.userNo)
+        ? (r.userName || '') + (r.userNo ? ' ' + r.userNo : '')
+        : certTag(r);
+      return '<article class="rec">' +
+        '<div class="rec-top"><div class="rec-title">' + r.title + '</div><div class="rec-amt">-' + money(r.amt) + '</div></div>' +
+        '<div class="rec-mid"><span>到账用户·' + user + '</span><span>已打款</span></div>' +
+        '<div class="rec-lines">提现ID:' + (r.id || '-') + '<br>申请时间:' + (r.apply || r.time || '-') +
+        '<br>打款时间:' + (r.paid || '-') + '</div></article>';
+    }
+    function recItemTf(r) {
+      var netText = (r.status || 'paid') === 'paid' ? money(r.net) : '--';
+      return '<article class="rec">' +
+        '<div class="rec-top"><div class="rec-title">划转至“' + certTag(r) + '”</div>' +
+        '<div class="rec-amt">' + money(r.amt) + '</div></div>' +
+        '<div class="rec-mid"><span>实际到账·' + netText + '</span>' + tfStatusHtml(r) + '</div>' +
+        '<div class="inc-body">' + splitTfDesc(r.split) +
+        '<div class="inc-tax">应国税要求扣除税额' + money(r.tax || 0) + '</div></div>' +
+        '<div class="inc-foot"><span>' + (r.time || '-') + '</span><span>动账后收益：' + money(r.after || 0) + '</span></div></article>';
+    }
+    function recStats(rows, showTax) {
+      var sum = rows.reduce(function (a, r) { return r2(a + r.amt); }, 0);
+      if (showTax === 'wd-only') {
+        return '<div class="stat-3 stat-1">' +
+          '<div><div class="k">累计提现 ' + tipIcon('wd-total') + '</div><div class="v">' + money(sum) + '</div></div></div>';
+      }
+      var html = '<div class="stat-3' + (showTax ? '' : ' stat-2') + '">' +
+        '<div><div class="k">累计提现 ' + tipIcon('wd-total') + '</div><div class="v">' + money(sum) + '</div></div>' +
+        '<div><div class="k">实际到账 ' + tipIcon('inc-net') + '</div><div class="v">' + money(sum) + '</div></div>';
+      if (showTax) {
+        var tax = rows.reduce(function (a, r) { return r2(a + (r.tax || 0)); }, 0);
+        html += '<div><div class="k">预扣税额 ' + tipIcon('inc-tax') + '</div><div class="v">' + money(tax) + '</div></div>';
+      }
+      return html + '</div>';
+    }
+    function tfStats(rows) {
+      var gross = rows.reduce(function (a, r) { return r2(a + (r.amt || 0)); }, 0);
+      var net = rows.reduce(function (a, r) { return (r.status || 'paid') === 'paid' ? r2(a + (r.net || 0)) : a; }, 0);
+      var tax = rows.reduce(function (a, r) { return (r.status || 'paid') === 'paid' ? r2(a + (r.tax || 0)) : a; }, 0);
+      return '<div class="stat-3">' +
+        '<div><div class="k">累计已划转 ' + tipIcon('tf-total') + '</div><div class="v">' + money(gross) + '</div></div>' +
+        '<div><div class="k">实际到账 ' + tipIcon('tf-net') + '</div><div class="v">' + money(net) + '</div></div>' +
+        '<div><div class="k">预扣税额 ' + tipIcon('tf-tax') + '</div><div class="v">' + money(tax) + '</div></div></div>';
+    }
+    function recList(rows, hint, showTax) {
+      var title = hint
+        ? '<div class="sec-head"><div class="sec-title">提现记录</div><p class="sec-hint">' + hint + '</p></div>'
+        : '<div class="sec-title">提现记录</div>';
+      return recStats(rows, showTax === false ? 'wd-only' : showTax) + title +
+        (rows.length ? rows.map(recItem).join('') : '<article class="rec" style="color:#9aa3af;text-align:center">暂无提现记录</article>');
+    }
+    function renderRecords() {
+      var tab = S.recordsTab === 'withdraw' ? 'withdraw' : 'transfer';
+      var tabs = '<div class="detail-tabs">' +
+        '<button type="button" class="' + (tab === 'transfer' ? 'active' : '') + '" data-act="records-tab" data-tab="transfer">划转明细</button>' +
+        '<button type="button" class="' + (tab === 'withdraw' ? 'active' : '') + '" data-act="records-tab" data-tab="withdraw">提现明细</button></div>';
+      var body;
+      if (tab === 'withdraw') {
+        var merged = filterWdKind(mergedRecords());
+        body = summaryWdHead(merged) +
+          '<p class="sec-hint" style="margin:-4px 4px 12px">合并后新数据。旧记录仍在各钱包「查看明细」的提现明细中。</p>' +
+          wdRecordBlock(merged);
+      } else {
+        body = tfStats(S.transfers) +
+          '<div class="sec-head"><div class="sec-title">划转记录</div>' +
+          '<p class="sec-hint">划转产生订单并调应税。成功后税后金额进入所选实名账户可提现。</p></div>' +
+          (S.transfers.length ? S.transfers.map(recItemTf).join('') : '<article class="rec" style="color:#9aa3af;text-align:center">暂无划转记录</article>');
+      }
+      return navBar('明细', 'home', true) +
+        '<div class="scroll" style="background:#f7f8fa">' + tabs +
+        '<div class="page-pad" style="padding-top:0">' + body + '</div></div>';
+    }
+    function incomeCard(item) {
+      return '<article class="inc-card"><div class="inc-top"><div class="inc-title">' + (item.name || item.title) +
+        '</div><div class="inc-plus">+' + money(item.amt) + '</div></div>' +
+        '<div class="inc-mid" style="justify-content:flex-end"><span class="inc-st st-paid">已结算</span></div>' +
+        '<div class="inc-body">' + item.desc + '</div>' +
+        '<div class="inc-foot"><span>' + item.time + '</span><span>动账后收益：' + money(item.after || 0) + '</span></div></article>';
+    }
+    function wdNet(r) {
+      if (r && r.net != null && r.net !== '') return r2(r.net);
+      return r2((r && r.amt || 0) - (r && r.tax || 0));
+    }
+    function successWdSum(rows) {
+      return rows.reduce(function (a, r) {
+        if (r.status === 'failed' || r.status === 'taxing') return a;
+        return r2(a + (r.amt || 0));
+      }, 0);
+    }
+    function walletWdStats(rows) {
+      var sum = rows.reduce(function (a, r) { return r2(a + (r.amt || 0)); }, 0);
+      var net = rows.reduce(function (a, r) { return r2(a + wdNet(r)); }, 0);
+      var tax = rows.reduce(function (a, r) { return r2(a + (r.tax || 0)); }, 0);
+      return '<div class="stat-3">' +
+        '<div><div class="k">累计提现 ' + tipIcon('wd-wallet-total') + '</div><div class="v">' + money(sum) + '</div></div>' +
+        '<div><div class="k">实际到账 ' + tipIcon('wd-wallet-net') + '</div><div class="v">' + money(net) + '</div></div>' +
+        '<div><div class="k">预扣税额 ' + tipIcon('wd-wallet-tax') + '</div><div class="v">' + money(tax) + '</div></div></div>';
+    }
+    function wdRecordBlock(rows) {
+      return (rows.length ? rows.map(recItem).join('') : '<article class="rec" style="color:#9aa3af;text-align:center">暂无提现记录</article>');
+    }
+    function renderIncome() {
+      var summary = S.detailScope === 'summary';
+      var w = KEYS.filter(function (x) { return x.id === S.incomeWallet; })[0] || KEYS[0];
+      var tab = S.detailTab || 'income';
+      var tabs = '<div class="detail-tabs">' +
+        '<button type="button" class="' + (tab === 'income' ? 'active' : '') + '" data-act="detail-tab" data-tab="income">收益明细</button>' +
+        '<button type="button" class="' + (tab === 'withdraw' ? 'active' : '') + '" data-act="detail-tab" data-tab="withdraw">提现明细</button></div>';
+      var body;
+      if (tab === 'withdraw') {
+        var wdRows = summary ? filterWdKind(mergedRecords()) : recordsForWallet(w.id);
+        var head = summary
+          ? summaryWdHead(wdRows)
+          : walletWdStats(wdRows) +
+            '<div class="sec-head"><div class="sec-title">提现记录</div>' +
+            '<p class="sec-hint">以下数据为该钱包的提现记录。</p></div>';
+        body = '<div class="page-pad" style="padding-top:0">' + head + wdRecordBlock(wdRows) + '</div>';
+      } else {
+        var rows = summary ? S.incomes.slice() : S.incomes.filter(function (x) { return x.wallet === w.id; });
+        body = '<div class="page-pad" style="padding-top:0">' +
+          (rows.length ? rows.map(incomeCard).join('') : '<article class="rec" style="color:#9aa3af;text-align:center">暂无收益明细</article>') + '</div>';
+      }
+      return navBar('查看明细', 'home', true) +
+        '<div class="scroll" style="background:#f7f8fa">' + tabs + body + '</div>';
+    }
+    function renderBooks() {
+      return navBar('账本对照', 'home', true) +
+        '<div class="scroll page-pad">' +
+        '<div class="book-card"><h3>两步账本</h3>' +
+        '<div class="book-row"><span>钱包总收入（三本收益流水）</span><b>' + money(incomeSum()) + '</b></div>' +
+        '<div class="book-row"><span>可划转余额合计（分口袋伪钱包）</span><b>' + money(waitSum()) + '</b></div>' +
+        '<div class="book-row"><span>可提现（各认证账户合计）</span><b>' + money(allAvail()) + '</b></div>' +
+        '<div class="book-row"><span>待入款（不进可划转余额）</span><b>' + money(pendingSum()) + '</b></div>' +
+        '<p class="warn">打款只进可划转余额。可提现只在用户划转且应税成功后增加。提现只扣可提现。</p></div>' +
+        '<div class="book-card"><h3>可划转余额 · 分口袋</h3>' +
+        KEYS.map(function (w) {
+          return '<div class="book-row"><span>' + w.short + '</span><b>' + money(S.pendingTransfer[w.id]) + '</b></div>';
+        }).join('') + '</div>' +
+        '<div class="book-card"><h3>可提现 · 按认证账户</h3>' +
+        S.kyc.ids.map(function (id) {
+          return '<div class="book-row"><span>' + id.name + kindTag(id) + ' · ' + id.no + '</span><b>' + money(id.withdrawable) + '</b></div>';
+        }).join('') + '</div>' +
+        '</div>';
+    }
+    function readAmt() {
+      var input = document.getElementById('amt');
+      if (!input) return amountInput;
+      var n = parseFloat(String(input.value).replace(/,/g, ''));
+      return isNaN(n) ? 0 : r2(n);
+    }
+    function submitWithdraw() {
+      amountInput = readAmt();
+      var c = selectedCert();
+      if (!c) { toast('请先选择实名账户'); return; }
+      if (!S.accountSelected) { toast('请选择到账方式'); return; }
+      if (amountInput <= 0) { toast('请输入提现金额'); return; }
+      if (amountInput > r2(c.withdrawable)) { toast('超出该账户可提现金额'); return; }
+      c.withdrawable = r2(c.withdrawable - amountInput);
+      S.records.unshift({
+        title: '提现到建设银行**** 8135',
+        amt: amountInput,
+        tax: 0,
+        id: '20260920154600' + String(Date.now()).slice(-6),
+        apply: '2026.09.20 15:46:00',
+        paid: '2026.09.20 16:10:00',
+        split: { project: 0, team: 0, activity: 0, unified: amountInput },
+        cert: c.key,
+        payType: c.type === 'corp' ? 'corp' : 'personal',
+        userName: c.name,
+        userNo: c.no
+      });
+      amountInput = 0;
+      S.recordsTab = 'withdraw';
+      toast('已提交，从' + c.name + '可提现打款');
+      setTimeout(function () { go('records'); }, 700);
+    }
+    function takeFromPockets(amts) {
+      var split = { project: 0, team: 0, activity: 0, left: 0 };
+      KEYS.forEach(function (w) {
+        var take = r2(amts[w.id] || 0);
+        S.pendingTransfer[w.id] = r2((S.pendingTransfer[w.id] || 0) - take);
+        split[w.id] = take;
+      });
+      return split;
+    }
+    function readTfAmts() {
+      var out = { project: 0, team: 0, activity: 0 };
+      document.querySelectorAll('[data-tf]').forEach(function (el) {
+        var n = parseFloat(String(el.value).replace(/,/g, ''));
+        out[el.getAttribute('data-tf')] = isNaN(n) ? 0 : r2(n);
+      });
+      S.tfAmt = out;
+      return out;
+    }
+    function submitTransfer() {
+      var amts = readTfAmts();
+      var c = selectedCert();
+      if (!c) { toast('请选择实名账户'); return; }
+      var total = KEYS.reduce(function (a, w) { return r2(a + (amts[w.id] || 0)); }, 0);
+      if (total <= 0) { toast('请输入划转金额'); return; }
+      for (var i = 0; i < KEYS.length; i++) {
+        var w = KEYS[i];
+        if ((amts[w.id] || 0) > r2(S.pendingTransfer[w.id] || 0)) {
+          toast(w.short + '超出可划转余额');
+          return;
+        }
+      }
+      if (!S.kyc.taxAgreed) {
+        S.kyc.showModal = true;
+        S.kyc.agreeChecked = false;
+        renderKyc();
+        return;
+      }
+      executeTransfer();
+    }
+    function executeTransfer() {
+      var amts = readTfAmts();
+      var c = selectedCert();
+      if (!c) return;
+      var total = KEYS.reduce(function (a, w) { return r2(a + (amts[w.id] || 0)); }, 0);
+      if (total <= 0) return;
+      var tax = c.type === 'corp' ? 0 : r2(Math.max(0.01, total * 0.01));
+      if (tax > total) tax = total;
+      var net = r2(total - tax);
+      var sp = takeFromPockets(amts);
+      c.withdrawable = r2((c.withdrawable || 0) + net);
+      S.transfers.unshift({
+        cert: c.key, name: c.name, no: c.no,
+        amt: total, tax: tax, net: net, after: c.withdrawable,
+        time: '2026-09-22 18:15:00', split: sp, status: 'paid'
+      });
+      S.tfAmt = { project: 0, team: 0, activity: 0 };
+      S.recordsTab = 'transfer';
+      toast(c.type === 'corp' ? '已划转到' + c.name + '，未扣税' : '已划转，应税后可提现 +' + money(net));
+      setTimeout(function () { go('records'); }, 700);
+    }
+    function bindTransfer() {
+      document.querySelectorAll('[data-tf]').forEach(function (el) {
+        el.addEventListener('input', function () {
+          readTfAmts();
+          var total = KEYS.reduce(function (a, w) { return r2(a + (S.tfAmt[w.id] || 0)); }, 0);
+          var line = document.getElementById('tfSum');
+          if (line) line.textContent = '本次合计 ' + money(total) + ' / 可划转余额 ' + money(waitSum());
+        });
+      });
+    }
+    function bindAmt(screenId, renderFn) {
+      var input = document.getElementById('amt');
+      if (!input) return;
+      input.addEventListener('input', function () { amountInput = readAmt(); });
+      input.addEventListener('change', function () {
+        amountInput = readAmt();
+        document.getElementById('screen-' + screenId).innerHTML = renderFn();
+        bindAmt(screenId, renderFn);
+      });
+    }
+    var renders = {
+      home: renderHome,
+      transfer: renderTransfer,
+      withdraw: renderWithdraw,
+      records: renderRecords,
+      income: renderIncome,
+      books: renderBooks
+    };
+    function showScreen(id) {
+      if (id === 'records-tf') { S.recordsTab = 'transfer'; id = 'records'; }
+      if (id === 'records-wd') { S.recordsTab = 'withdraw'; id = 'records'; }
+      if (id === 'home-notice') {
+        S.noticeSeen = false;
+        id = 'home';
+      }
+      if (id && id.indexOf('kyc-') === 0) {
+        S.kyc.taxAgreed = false;
+        S.kyc.agreeChecked = false;
+        S.kyc.showModal = true;
+        id = 'transfer';
+      }
+      if (!renders[id]) id = 'home';
+      if (id !== 'transfer') S.tfAcctOpen = false;
+      if (id !== 'withdraw') S.wdAcctOpen = false;
+      document.querySelectorAll('.screen').forEach(function (el) { el.classList.remove('active'); });
+      var el = document.getElementById('screen-' + id);
+      el.innerHTML = renders[id]();
+      el.classList.add('active');
+      document.querySelectorAll('.demo-nav button').forEach(function (b) {
+        var sid = b.dataset.screen;
+        var on = sid === id;
+        if (id === 'records') {
+          on = (sid === 'records-tf' && S.recordsTab !== 'withdraw') ||
+            (sid === 'records-wd' && S.recordsTab === 'withdraw');
+        }
+        b.classList.toggle('active', on);
+      });
+      if (id === 'withdraw') bindAmt('withdraw', renderWithdraw);
+      if (id === 'transfer') bindTransfer();
+      if (kycNeedGate()) renderKyc();
+      else {
+        var mask = document.getElementById('kycMask');
+        if (mask) { mask.classList.remove('open'); mask.innerHTML = ''; }
+      }
+      if (id === 'home') renderNotice();
+      else hideNotice();
+      post(id);
+    }
+    function startKyc() {
+      S.kyc.taxAgreed = false;
+      S.kyc.agreeChecked = false;
+      S.kyc.showModal = true;
+    }
+    function confirmKyc() {
+      if (cfg(COPY.agreementName) && !S.kyc.agreeChecked) {
+        toast('请先同意《' + cfg(COPY.agreementName) + '》');
+        return;
+      }
+      S.kyc.taxAgreed = true;
+      S.kyc.showModal = false;
+      renderKyc();
+      executeTransfer();
+    }
+    function cancelKyc() {
+      S.kyc.showModal = false;
+      S.kyc.agreeChecked = false;
+      renderKyc();
+      toast('未同意协议，本次未划转');
+    }
+    function simCredit() {
+      var gross = 1.35;
+      S.income.project = r2(S.income.project + gross);
+      S.today.project = r2(S.today.project + gross);
+      S.pendingTransfer.project = r2(S.pendingTransfer.project + gross);
+      S.incomes.unshift({
+        wallet: 'project', name: '模拟结算', amt: gross, tax: 0, net: gross,
+        after: S.income.project, time: '2026-09-22 16:40:00', status: 'paid',
+        desc: '打款入项目收益钱包可划转余额 +' + money(gross) + '，未扣税，未进入可提现。'
+      });
+      toast('已入项目可划转余额，可提现未变');
+      var active = document.querySelector('.screen.active');
+      showScreen(active ? active.id.replace('screen-', '') : 'home');
+    }
+    function resetLedger() {
+      var mode = S.mode;
+      S = cloneInit();
+      S.mode = mode;
+      amountInput = 0;
+      toast('账本已重置');
+      showScreen('home');
+    }
+    document.querySelector('.phone-frame').addEventListener('change', function (e) {
+      var sel = e.target.closest('select[data-act="wd-kind"]');
+      if (!sel) return;
+      S.wdKindFilter = sel.value || 'all';
+      var active = document.querySelector('.screen.active');
+      if (!active) return;
+      showScreen(active.id.replace('screen-', ''));
+    });
+    document.querySelector('.phone-frame').addEventListener('click', function (e) {
+      if (e.target.id === 'kycMask' || e.target.id === 'noticeMask') return;
+      if (e.target.id === 'tipMask') {
+        e.target.classList.remove('open');
+        return;
+      }
+      var node = e.target.closest('[data-act]');
+      if (!node) return;
+      var act = node.getAttribute('data-act');
+      if (act === 'home' || act === 'withdraw' || act === 'records' || act === 'records-tf' || act === 'records-wd' || act === 'income' || act === 'books' || act === 'transfer') {
+        if (act === 'income') {
+          if (node.dataset.scope) S.detailScope = node.dataset.scope === 'summary' ? 'summary' : 'wallet';
+          if (node.dataset.wallet) S.incomeWallet = node.dataset.wallet;
+          S.detailTab = node.dataset.tab || 'income';
+        }
+        if (act === 'transfer') {
+          S.tfAmt = { project: 0, team: 0, activity: 0 };
+        }
+        if (act === 'records-tf') { S.recordsTab = 'transfer'; return go('records'); }
+        if (act === 'records-wd') { S.recordsTab = 'withdraw'; return go('records'); }
+        return go(act);
+      }
+      if (act === 'records-tab') {
+        S.recordsTab = node.dataset.tab || 'transfer';
+        return go('records');
+      }
+      if (act === 'detail-tab') {
+        S.detailTab = node.dataset.tab || 'income';
+        return go('income');
+      }
+      if (act === 'stat-tip') {
+        var tip = STAT_TIPS[node.dataset.tip];
+        if (!tip) return;
+        document.getElementById('tipTitle').textContent = tip.title;
+        document.getElementById('tipBody').textContent = tip.text;
+        document.getElementById('tipMask').classList.add('open');
+        return;
+      }
+      if (act === 'fail-tip') {
+        document.getElementById('tipTitle').textContent = '到账失败';
+        document.getElementById('tipBody').textContent = node.getAttribute('data-reason') || '到账失败，请稍后重试';
+        document.getElementById('tipMask').classList.add('open');
+        return;
+      }
+      if (act === 'close-tip') {
+        document.getElementById('tipMask').classList.remove('open');
+        return;
+      }
+      if (act === 'notice-ok') {
+        S.noticeSeen = true;
+        hideNotice();
+        return;
+      }
+      if (act === 'open-proto') {
+        e.preventDefault();
+        document.getElementById('tipTitle').textContent = cfg(COPY.agreementName) || '协议';
+        document.getElementById('tipBody').textContent = cfg(COPY.agreementBody) || '协议正文由后台配置。';
+        document.getElementById('tipMask').classList.add('open');
+        return;
+      }
+      if (act === 'kyc-agree') {
+        S.kyc.agreeChecked = !!node.checked;
+        renderKyc();
+        return;
+      }
+      if (act === 'kyc-cancel') {
+        cancelKyc();
+        return;
+      }
+      if (act === 'kyc-ok') {
+        confirmKyc();
+        return;
+      }
+      if (act === 'toggle-wd-acct') {
+        amountInput = readAmt();
+        S.wdAcctOpen = !S.wdAcctOpen;
+        document.getElementById('screen-withdraw').innerHTML = renderWithdraw();
+        bindAmt('withdraw', renderWithdraw);
+        return;
+      }
+      if (act === 'pick-wd-acct') {
+        amountInput = readAmt();
+        S.kyc.pick = node.getAttribute('data-pick') || '';
+        var pickedWd = selectedCert();
+        S.kyc.cert = pickedWd && pickedWd.type === 'corp' ? 'corp' : (pickedWd ? 'personal' : S.kyc.cert);
+        S.wdAcctOpen = false;
+        document.getElementById('screen-withdraw').innerHTML = renderWithdraw();
+        bindAmt('withdraw', renderWithdraw);
+        return;
+      }
+      if (act === 'toggle-tf-acct') {
+        readTfAmts();
+        S.tfAcctOpen = !S.tfAcctOpen;
+        document.getElementById('screen-transfer').innerHTML = renderTransfer();
+        bindTransfer();
+        return;
+      }
+      if (act === 'pick-tf-acct') {
+        readTfAmts();
+        S.kyc.pick = node.getAttribute('data-pick') || '';
+        var pickedTf = selectedCert();
+        S.kyc.cert = pickedTf && pickedTf.type === 'corp' ? 'corp' : (pickedTf ? 'personal' : S.kyc.cert);
+        S.tfAcctOpen = false;
+        document.getElementById('screen-transfer').innerHTML = renderTransfer();
+        bindTransfer();
+        return;
+      }
+      if (act === 'pick-cert') {
+        S.kyc.pick = node.getAttribute('data-pick') || '';
+        var c = selectedCert();
+        S.kyc.cert = c && c.type === 'corp' ? 'corp' : 'personal';
+        var cur = document.querySelector('.screen.active');
+        showScreen(cur ? cur.id.replace('screen-', '') : 'home');
+        return;
+      }
+      if (act === 'pick-ccb') {
+        S.accountSelected = true;
+        toast('已选择建设银行');
+        showScreen(document.querySelector('.screen.active').id.replace('screen-', ''));
+      }
+      if (act === 'all-amt') {
+        if (!selectedCert()) { toast('请先选择实名账户'); return; }
+        amountInput = certAvail();
+        document.getElementById('screen-withdraw').innerHTML = renderWithdraw();
+        bindAmt('withdraw', renderWithdraw);
+      }
+      if (act === 'all-one') {
+        readTfAmts();
+        var wid = node.dataset.wallet;
+        S.tfAmt[wid] = S.pendingTransfer[wid] || 0;
+        document.getElementById('screen-transfer').innerHTML = renderTransfer();
+        bindTransfer();
+      }
+      if (act === 'submit-wd') submitWithdraw();
+      if (act === 'submit-tf') submitTransfer();
+      if (act === 'withdraw-one') {
+        toast('现网要分别点三个提现');
+        go('withdraw');
+      }
+    });
+    var toolBar = document.querySelector('.tool-bar');
+    if (toolBar) {
+      toolBar.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-act]');
+        if (!b) return;
+        if (b.dataset.act === 'sim-credit') simCredit();
+        if (b.dataset.act === 'reset') resetLedger();
+      });
+    }
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'walletTool') return;
+      if (e.data.act === 'sim-credit') simCredit();
+      if (e.data.act === 'reset') resetLedger();
+    });
+    document.getElementById('sceneNav').innerHTML = SCENES.map(function (s) {
+      return '<button type="button" data-screen="' + s.id + '">' + s.label + '</button>';
+    }).join('');
+    document.getElementById('sceneNav').addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (b) showScreen(b.dataset.screen);
+    });
+    document.getElementById('modeNav').innerHTML =
+      '<button type="button" data-mode="before">现网：三个提现</button>' +
+      '<button type="button" data-mode="after">优化后：划转 + 合并提现</button>';
+    document.getElementById('modeNav').addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      S.mode = b.dataset.mode;
+      document.querySelectorAll('#modeNav button').forEach(function (x) {
+        x.classList.toggle('active', x === b);
+      });
+      showScreen('home');
+    });
+    var params = new URLSearchParams(location.search);
+    if (params.get('embed') === '1') document.body.classList.add('embed-mode');
+    if (params.get('mode') === 'before' || params.get('mode') === 'after') S.mode = params.get('mode');
+    document.querySelectorAll('#modeNav button').forEach(function (x) {
+      x.classList.toggle('active', x.dataset.mode === S.mode);
+    });
+    var kyc = params.get('kyc') || '';
+    var start = params.get('screen') || 'home';
+    if (params.get('recordsTab') === 'withdraw') S.recordsTab = 'withdraw';
+    if (params.get('recordsTab') === 'transfer') S.recordsTab = 'transfer';
+    if (start === 'records-tf') { S.recordsTab = 'transfer'; start = 'records'; }
+    if (start === 'records-wd') { S.recordsTab = 'withdraw'; start = 'records'; }
+    if (start === 'home-notice') {
+      S.noticeSeen = false;
+      start = 'home';
+    }
+    if (start.indexOf('kyc-') === 0 || kyc) {
+      startKyc();
+      start = 'transfer';
+    }
+    showScreen(['home', 'transfer', 'withdraw', 'records', 'income', 'books'].indexOf(start) >= 0 ? start : 'home');
+  </script>
+</body>
+</html>
