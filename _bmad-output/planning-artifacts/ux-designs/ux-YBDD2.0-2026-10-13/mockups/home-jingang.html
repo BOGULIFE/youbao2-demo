@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FR-022 首页金刚区关键屏</title>
+  <style>
+    :root {
+      --orange: #ff4d22;
+      --orange-soft: #fff1ec;
+      --page: #f6f7fb;
+      --card: #fff;
+      --ink: #252836;
+      --muted: #9498a8;
+      --line: #eceef3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #e9ebf2;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+    .stage { display: grid; place-items: center; min-height: 100vh; padding: 24px; }
+    .phone {
+      width: min(390px, 100%);
+      min-height: 844px;
+      overflow: hidden;
+      border-radius: 24px;
+      background: var(--page);
+      box-shadow: 0 20px 60px rgba(37, 40, 54, .18);
+    }
+    .topbar { padding: 18px 16px 12px; background: linear-gradient(135deg, #fff1ec 0%, #fff8f3 58%, #f6f7fb 100%); }
+    .topbar-row { display: flex; align-items: center; justify-content: space-between; }
+    .profile { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 14px; }
+    .avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #f0c9a7; font-size: 19px; }
+    .actions { display: flex; gap: 7px; color: #454854; }
+    .action { width: 31px; height: 31px; display: grid; place-items: center; border: 1px solid #d8dbe4; border-radius: 10px; background: rgba(255, 255, 255, .82); font-size: 13px; }
+    .search { display: flex; align-items: center; gap: 8px; height: 36px; margin-top: 14px; padding: 0 12px; border: 1px solid #ff7151; border-radius: 20px; background: #fff; color: #9aa0ad; font-size: 12px; }
+    .search strong { margin-left: auto; color: var(--orange); }
+    main { padding: 0 12px 86px; }
+    .hero { height: 124px; display: flex; align-items: end; justify-content: space-between; margin: 0 -12px 12px; padding: 18px 24px; background: linear-gradient(115deg, #fff0e8, #fffdfb); }
+    .hero small { color: var(--orange); font-weight: 800; }
+    .hero h1 { margin: 5px 0 0; font-size: 21px; line-height: 1.15; }
+    .hero-art { width: 90px; height: 78px; display: grid; place-items: center; border-radius: 30px 18px 30px 18px; background: linear-gradient(135deg, #ffcb8e, #62dacc); color: #fff; font-size: 30px; transform: rotate(-8deg); }
+    .section { margin-bottom: 12px; }
+    .quick { padding: 12px; border-radius: 12px; background: var(--card); box-shadow: 0 3px 10px rgba(45, 55, 85, .025); }
+    .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
+    .section-head h2 { margin: 0; font-size: 15px; font-weight: 900; }
+    .section-head span { color: var(--muted); font-size: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 8px; }
+    .entry { min-width: 0; display: grid; justify-items: center; gap: 4px; min-height: 72px; padding: 2px 0; border: 0; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
+    .entry:active .icon { transform: scale(.96); background: #ffe2d9; }
+    .icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: var(--orange-soft); font-size: 20px; transition: transform .12s ease, background .12s ease; }
+    .entry-title, .entry-subtitle { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .entry-title { font-size: 12px; font-weight: 700; }
+    .entry-subtitle { color: var(--muted); font-size: 9px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 14px 12px; border-radius: 12px; background: var(--card); }
+    .stat { text-align: center; border-right: 1px solid var(--line); }
+    .stat:last-child { border-right: 0; }
+    .stat b { display: block; color: var(--orange); font-size: 16px; }
+    .stat span { color: var(--muted); font-size: 10px; }
+    .academy { min-height: 104px; padding: 14px; border-radius: 12px; background: linear-gradient(135deg, #fff5f0, #fff); }
+    .academy b { font-size: 14px; }
+    .academy p { margin: 7px 0 0; color: var(--muted); font-size: 11px; }
+    .bottom { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); height: 74px; margin-top: -74px; padding: 9px 12px 10px; background: rgba(255,255,255,.96); border-top: 1px solid var(--line); }
+    .nav { display: grid; place-items: center; gap: 2px; border: 0; background: transparent; color: #758096; font-size: 10px; }
+    .nav.active { color: var(--orange); }
+    .nav i { font-style: normal; font-size: 18px; }
+    @media (max-width: 430px) { .stage { padding: 0; } .phone { min-height: 100vh; border-radius: 0; } }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <section class="phone" aria-label="右豹创作者首页 FR-022 金刚区关键屏">
+      <header class="topbar">
+        <div class="topbar-row">
+          <div class="profile"><span class="avatar" aria-hidden="true">🦁</span><span>温の</span></div>
+          <div class="actions" aria-label="顶部操作"><span class="action">✉</span><span class="action">•••</span><span class="action">◎</span></div>
+        </div>
+        <div class="search" role="search"><span aria-hidden="true">⌕</span><span>输任务/项目名搜一搜</span><strong>搜索</strong></div>
+      </header>
+      <main>
+        <section class="hero" aria-label="首页 Banner">
+          <div><small>红果短剧</small><h1>免费教学授课答疑</h1></div>
+          <div class="hero-art" aria-hidden="true">▶</div>
+        </section>
+        <section class="section quick" aria-labelledby="quick-title">
+          <div class="section-head"><h2 id="quick-title">快捷入口</h2><span>按运营配置展示</span></div>
+          <div class="grid">
+            <button class="entry" aria-label="活动中心，热门活动"><span class="icon" aria-hidden="true">🎁</span><span class="entry-title">活动中心</span><span class="entry-subtitle">热门活动</span></button>
+            <button class="entry" aria-label="找项目，精选项目"><span class="icon" aria-hidden="true">🔎</span><span class="entry-title">找项目</span><span class="entry-subtitle">精选项目</span></button>
+            <button class="entry" aria-label="工具市场，提效工具"><span class="icon" aria-hidden="true">🧰</span><span class="entry-title">工具市场</span><span class="entry-subtitle">提效工具</span></button>
+            <button class="entry" aria-label="新手学院，快速入门"><span class="icon" aria-hidden="true">🎓</span><span class="entry-title">新手学院</span><span class="entry-subtitle">快速入门</span></button>
+            <button class="entry" aria-label="任务中心，今日任务"><span class="icon" aria-hidden="true">✅</span><span class="entry-title">任务中心</span><span class="entry-subtitle">今日任务</span></button>
+            <button class="entry" aria-label="收益明细，查看收益"><span class="icon" aria-hidden="true">💰</span><span class="entry-title">收益明细</span><span class="entry-subtitle">查看收益</span></button>
+            <button class="entry" aria-label="内容诊断，优化作品"><span class="icon" aria-hidden="true">📈</span><span class="entry-title">内容诊断</span><span class="entry-subtitle">优化作品</span></button>
+            <button class="entry" aria-label="联系客服，获取帮助"><span class="icon" aria-hidden="true">💬</span><span class="entry-title">联系客服</span><span class="entry-subtitle">获取帮助</span></button>
+          </div>
+        </section>
+        <section class="section stats" aria-label="首页数据"><div class="stat"><b>¥328.50</b><span>今日预计收益</span></div><div class="stat"><b>3</b><span>进行中任务</span></div><div class="stat"><b>¥1,280</b><span>可提现</span></div></section>
+        <section class="section academy" aria-label="新手学院与活动中心"><b>🎓 新手学院</b><p>从入门课程开始，完成你的第一条变现路径</p></section>
+      </main>
+      <nav class="bottom" aria-label="底部导航"><button class="nav active"><i>⌂</i>首页</button><button class="nav"><i>◇</i>变现</button><button class="nav"><i>▣</i>工具</button><button class="nav"><i>▤</i>数据</button><button class="nav"><i>◉</i>我的</button></nav>
+    </section>
+  </div>
+</body>
+</html>
