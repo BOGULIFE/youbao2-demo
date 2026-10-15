@@ -361,8 +361,9 @@
       if (group.items.length) {
         group.items.forEach(function (item) {
           var cls = item.id === active ? 'nav-item active' : 'nav-item';
+          var useInPlace = item.inPlace && active === 'framework-shell';
           html.push(
-            '    <a class="' + cls + '" href="' + (item.inPlace ? '#' : item.href) + '"' + (item.inPlace ? ' data-nav-inplace="' + item.id + '"' : '') + '>',
+            '    <a class="' + cls + '" href="' + (useInPlace ? '#' : item.href) + '"' + (useInPlace ? ' data-nav-inplace="' + item.id + '"' : '') + '>',
             svgIcon(ICONS[item.id] || ICON_FALLBACK),
             '      <span class="nav-text">' + item.label + '</span>',
             '    </a>'
