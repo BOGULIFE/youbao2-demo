@@ -232,7 +232,7 @@
 
     <section class="glass-card inline-fr-view" id="inline-fr022" aria-label="首页金刚区需求内容">
       <div class="inline-fr-head"><strong>FR-022 · 首页金刚区</strong><button class="btn-ghost-sm" type="button" id="close-inline-fr022">返回 Sprint 总览</button></div>
-      <div class="inline-fr-body"><iframe title="FR-022 首页金刚区" src="fr-022-home-jingang.html?tab=fe&embed=1"></iframe></div>
+      <div class="inline-fr-body"><iframe title="FR-022 首页金刚区" src="fr-022-home-jingang-inline.html?tab=fe"></iframe></div>
     </section>
 
     <div class="summary-grid">
@@ -590,20 +590,10 @@
       var overviewSections = document.querySelectorAll('main > .breadcrumb, main > .page-header, main > .summary-grid, main > .glass-card:not(#inline-fr022)');
       var inline = document.getElementById('inline-fr022');
       var close = document.getElementById('close-inline-fr022');
-      var frame = inline ? inline.querySelector('iframe') : null;
-      function simplifyFrame() {
-        if (!frame || !frame.contentDocument || frame.contentDocument.getElementById('sprint-embed-style')) return;
-        var style = frame.contentDocument.createElement('style');
-        style.id = 'sprint-embed-style';
-        style.textContent = '.sidebar{display:none!important}main{margin-left:0!important;padding:16px 20px 42px!important}.crumb{display:none!important}';
-        frame.contentDocument.head.appendChild(style);
-      }
-      if (frame) frame.addEventListener('load', simplifyFrame);
       window.openIterationInline = function (id) {
         if (id !== 'fr-022-home-jingang' || !inline) return;
         overviewSections.forEach(function (el) { el.style.display = 'none'; });
         inline.classList.add('open');
-        simplifyFrame();
         document.querySelectorAll('.nav-item').forEach(function (el) { el.classList.toggle('active', el.getAttribute('data-nav-inplace') === id); });
         var crumb = document.querySelector('.breadcrumb');
         if (crumb) crumb.innerHTML = '<span>Sprint 概览</span> / <span>首页金刚区</span>';
