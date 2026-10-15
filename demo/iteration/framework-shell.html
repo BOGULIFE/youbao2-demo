@@ -100,6 +100,17 @@
       border: 1px solid rgba(255,255,255,0.55); border-radius: var(--radius-lg);
       box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden;
     }
+    .inline-fr-view { display: none; }
+    .inline-fr-view.open { display: block; }
+    .inline-fr-view iframe {
+      display: block; width: 100%; min-height: calc(100vh - 150px); height: 900px;
+      border: 0; border-radius: var(--radius-lg); background: #f0f4f8;
+    }
+    .inline-fr-back {
+      display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px;
+      border: 1px solid var(--primary-border); border-radius: 8px; padding: 7px 12px;
+      color: var(--primary); background: var(--primary-light); cursor: pointer; font: inherit;
+    }
     .summary-grid {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px;
     }
@@ -571,6 +582,11 @@
         <strong>如何预览：</strong>左侧点击对应需求，页内 Tab 切换 <strong>前端交互</strong> / <strong>管理后台</strong> / <strong>业务流程</strong>。「品牌退款」C 端为卡片级展示，不重做完整页面。
       </div>
     </div>
+
+    <section class="inline-fr-view" id="inline-fr-022" aria-label="首页金刚区内嵌需求详情">
+      <button type="button" class="inline-fr-back" id="inline-fr-back">← 返回 Sprint 概览</button>
+      <iframe title="首页金刚区需求详情" src="fr-022-home-jingang-inline-ux.html?tab=fe"></iframe>
+    </section>
   </main>
   <script src="sidebar-nav.js?v=sprint1009b"></script>
   <script>
@@ -695,6 +711,32 @@
       if (!shipped) save(stored);
       updateSummary(selects);
       syncArchivePlacement();
+    })();
+
+    (function () {
+      var main = document.querySelector('.main');
+      var inline = document.getElementById('inline-fr-022');
+      var back = document.getElementById('inline-fr-back');
+      if (!main || !inline) return;
+      function setOverviewVisible(visible) {
+        Array.prototype.forEach.call(main.children, function (el) {
+          if (el !== inline) el.hidden = !visible;
+        });
+        inline.classList.toggle('open', !visible);
+        if (visible) window.scrollTo(0, 0);
+      }
+      window.openIterationInline = function (id) {
+        if (id !== 'fr-022-home-jingang') return;
+        setOverviewVisible(false);
+        inline.scrollIntoView({ block: 'start' });
+      };
+      if (back) back.addEventListener('click', function () { setOverviewVisible(true); });
+      main.querySelectorAll('a[href^="fr-022-home-jingang.html"]').forEach(function (link) {
+        link.addEventListener('click', function (event) {
+          event.preventDefault();
+          window.openIterationInline('fr-022-home-jingang');
+        });
+      });
     })();
   </script>
 </body>
