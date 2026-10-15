@@ -14,6 +14,7 @@
 | FR-016 | 奖钱包合并提现 | `demo/iteration/fr-wallet-merge-withdraw.html` |
 | FR-019 | 别名绑定 | `demo/iteration/fr-alias-bind.html` |
 | FR-021 | 2.0优化 | `demo/iteration/fr-creator-home-2-opt.html` |
+| FR-022 | 首页金刚区 | `demo/iteration/fr-022-home-jingang.html` |
 
 ## 归档需求
 
