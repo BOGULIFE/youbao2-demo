@@ -103,6 +103,13 @@
     .summary-grid {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px;
     }
+    .inline-fr-view { display: none; margin-bottom: 18px; }
+    .inline-fr-view.open { display: block; }
+    .inline-fr-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .inline-fr-head strong { font-size: 15px; }
+    .inline-fr-body { height: calc(100vh - 190px); min-height: 620px; padding: 0; }
+    .inline-fr-body iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+    .inline-fr-head button { border: 1px solid var(--border); background: #fff; color: var(--text-secondary); border-radius: 7px; padding: 7px 12px; cursor: pointer; }
     @media (max-width: 900px) { .summary-grid { grid-template-columns: 1fr; } }
     .summary-card {
       background: var(--surface-glass); backdrop-filter: blur(16px);
@@ -222,6 +229,11 @@
         <p class="page-desc">统一入口：「迭代需求」含进行中的专项；状态改为「已上线」后自动归入「归档需求」；改为「已暂停」后归入「废纸篓」。</p>
       </div>
     </header>
+
+    <section class="glass-card inline-fr-view" id="inline-fr022" aria-label="首页金刚区需求内容">
+      <div class="inline-fr-head"><strong>FR-022 · 首页金刚区</strong><button class="btn-ghost-sm" type="button" id="close-inline-fr022">返回 Sprint 总览</button></div>
+      <div class="inline-fr-body"><iframe title="FR-022 首页金刚区" src="fr-022-home-jingang.html?tab=fe&embed=1"></iframe></div>
+    </section>
 
     <div class="summary-grid">
       <div class="summary-card">
@@ -574,6 +586,27 @@
   </main>
   <script src="sidebar-nav.js?v=sprint1009b"></script>
   <script>
+    (function () {
+      var overviewSections = document.querySelectorAll('main > .summary-grid, main > .glass-card:not(#inline-fr022)');
+      var inline = document.getElementById('inline-fr022');
+      var close = document.getElementById('close-inline-fr022');
+      window.openIterationInline = function (id) {
+        if (id !== 'fr-022-home-jingang' || !inline) return;
+        overviewSections.forEach(function (el) { el.style.display = 'none'; });
+        inline.classList.add('open');
+        document.querySelectorAll('.nav-item').forEach(function (el) { el.classList.toggle('active', el.getAttribute('data-nav-inplace') === id); });
+        var crumb = document.querySelector('.breadcrumb');
+        if (crumb) crumb.innerHTML = '<span>Sprint 概览</span> / <span>首页金刚区</span>';
+      };
+      if (close) close.addEventListener('click', function () {
+        inline.classList.remove('open');
+        overviewSections.forEach(function (el) { el.style.display = ''; });
+        document.querySelectorAll('.nav-item').forEach(function (el) { el.classList.remove('active'); });
+        var crumb = document.querySelector('.breadcrumb');
+        if (crumb) crumb.innerHTML = '<span>Sprint 概览</span>';
+      });
+    })();
+
     (function () {
       var STORAGE_KEY = 'ybdd-sprint-fr-status';
       var REV_KEY = 'ybdd-sprint-fr-status-rev';
