@@ -105,7 +105,7 @@
     }
     .inline-fr-view { display: none; margin-bottom: 18px; }
     .inline-fr-view.open { display: block; }
-    .inline-fr-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .inline-fr-head { display: none; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
     .inline-fr-head strong { font-size: 15px; }
     .inline-fr-body { height: calc(100vh - 190px); min-height: 620px; padding: 0; }
     .inline-fr-body iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
@@ -587,13 +587,23 @@
   <script src="sidebar-nav.js?v=sprint1009b"></script>
   <script>
     (function () {
-      var overviewSections = document.querySelectorAll('main > .summary-grid, main > .glass-card:not(#inline-fr022)');
+      var overviewSections = document.querySelectorAll('main > .breadcrumb, main > .page-header, main > .summary-grid, main > .glass-card:not(#inline-fr022)');
       var inline = document.getElementById('inline-fr022');
       var close = document.getElementById('close-inline-fr022');
+      var frame = inline ? inline.querySelector('iframe') : null;
+      function simplifyFrame() {
+        if (!frame || !frame.contentDocument || frame.contentDocument.getElementById('sprint-embed-style')) return;
+        var style = frame.contentDocument.createElement('style');
+        style.id = 'sprint-embed-style';
+        style.textContent = '.sidebar{display:none!important}main{margin-left:0!important;padding:16px 20px 42px!important}.crumb{display:none!important}';
+        frame.contentDocument.head.appendChild(style);
+      }
+      if (frame) frame.addEventListener('load', simplifyFrame);
       window.openIterationInline = function (id) {
         if (id !== 'fr-022-home-jingang' || !inline) return;
         overviewSections.forEach(function (el) { el.style.display = 'none'; });
         inline.classList.add('open');
+        simplifyFrame();
         document.querySelectorAll('.nav-item').forEach(function (el) { el.classList.toggle('active', el.getAttribute('data-nav-inplace') === id); });
         var crumb = document.querySelector('.breadcrumb');
         if (crumb) crumb.innerHTML = '<span>Sprint 概览</span> / <span>首页金刚区</span>';
