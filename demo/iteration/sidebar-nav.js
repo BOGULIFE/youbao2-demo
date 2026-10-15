@@ -67,7 +67,7 @@
         { id: 'fr-yijian-daifa-iter2', label: '一键代发迭代 2.0', href: 'fr-yijian-daifa-iter2.html', fr: 'FR-018', defaultStatus: 'live' },
         { id: 'fr-alias-bind', label: '别名绑定', href: 'fr-alias-bind.html', fr: 'FR-019', defaultStatus: 'dev' },
         { id: 'fr-creator-home-2-opt', label: '2.0优化', href: 'fr-creator-home-2-opt.html', fr: 'FR-021', defaultStatus: 'todo' },
-        { id: 'fr-022-home-jingang', label: '首页金刚区', href: 'fr-022-home-jingang.html?tab=fe', drawer: true, fr: 'FR-022', defaultStatus: 'todo' }
+        { id: 'fr-022-home-jingang', label: '首页金刚区', href: 'fr-022-home-jingang.html?tab=fe', fr: 'FR-022', defaultStatus: 'todo' }
       ]
     },
     {
@@ -234,14 +234,6 @@
       '  content:"";position:absolute;left:0;top:7px;bottom:7px;',
       '  width:3px;border-radius:0 2px 2px 0;background:var(--primary,#2563eb);',
       '}',
-      '.iteration-fr-drawer-overlay{position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.35);opacity:0;pointer-events:none;transition:opacity .22s ease;} ',
-      '.iteration-fr-drawer-overlay.open{opacity:1;pointer-events:auto;} ',
-      '.iteration-fr-drawer{position:absolute;top:0;right:0;bottom:0;width:min(960px,100%);background:#fff;box-shadow:-8px 0 40px rgba(30,40,60,.18);transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;} ',
-      '.iteration-fr-drawer-overlay.open .iteration-fr-drawer{transform:translateX(0);} ',
-      '.iteration-fr-drawer-head{height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--border,#e8edf3);font-weight:700;} ',
-      '.iteration-fr-drawer-head button{border:0;background:#f1f5f9;border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:18px;} ',
-      '.iteration-fr-drawer-body{flex:1;min-height:0;} ',
-      '.iteration-fr-drawer-body iframe{width:100%;height:100%;border:0;background:#fff;} ',
       '.nav-icon{display:none;flex-shrink:0;width:18px;height:18px;}',
       '.nav-text{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}',
       '.nav-empty{',
@@ -385,31 +377,7 @@
 
     container.innerHTML = html.join('\n');
     bindGroupToggles(container, savedState);
-    bindDrawerItems(container);
     bindCollapseChrome();
-  }
-
-  function bindDrawerItems(container) {
-    container.querySelectorAll('[data-nav-drawer]').forEach(function (item) {
-      item.addEventListener('click', function (event) {
-        event.preventDefault();
-        openFrDrawer();
-      });
-    });
-  }
-
-  function openFrDrawer() {
-    var overlay = document.getElementById('iteration-fr-drawer-overlay');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'iteration-fr-drawer-overlay';
-      overlay.className = 'iteration-fr-drawer-overlay';
-      overlay.innerHTML = '<aside class="iteration-fr-drawer" aria-label="FR-022 首页金刚区"><div class="iteration-fr-drawer-head"><span>FR-022 · 首页金刚区</span><button type="button" aria-label="关闭">×</button></div><div class="iteration-fr-drawer-body"><iframe title="FR-022 首页金刚区" src="fr-022-home-jingang.html?tab=fe&embed=1"></iframe></div></aside>';
-      document.body.appendChild(overlay);
-      overlay.querySelector('button').addEventListener('click', function () { overlay.classList.remove('open'); });
-      overlay.addEventListener('click', function (event) { if (event.target === overlay) overlay.classList.remove('open'); });
-    }
-    overlay.classList.add('open');
   }
 
   function initSidebars() {
