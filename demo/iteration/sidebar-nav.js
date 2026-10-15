@@ -67,7 +67,7 @@
         { id: 'fr-yijian-daifa-iter2', label: '一键代发迭代 2.0', href: 'fr-yijian-daifa-iter2.html', fr: 'FR-018', defaultStatus: 'live' },
         { id: 'fr-alias-bind', label: '别名绑定', href: 'fr-alias-bind.html', fr: 'FR-019', defaultStatus: 'dev' },
         { id: 'fr-creator-home-2-opt', label: '2.0优化', href: 'fr-creator-home-2-opt.html', fr: 'FR-021', defaultStatus: 'todo' },
-        { id: 'fr-022-home-jingang', label: '首页金刚区', href: 'fr-022-home-jingang.html?tab=fe', inPlace: true, fr: 'FR-022', defaultStatus: 'todo' }
+        { id: 'fr-022-home-jingang', label: '首页金刚区', href: 'fr-022-home-jingang.html?tab=fe', fr: 'FR-022', defaultStatus: 'todo' }
       ]
     },
     {
@@ -361,9 +361,8 @@
       if (group.items.length) {
         group.items.forEach(function (item) {
           var cls = item.id === active ? 'nav-item active' : 'nav-item';
-          var useInPlace = item.inPlace && active === 'framework-shell';
           html.push(
-            '    <a class="' + cls + '" href="' + (useInPlace ? '#' : item.href) + '"' + (useInPlace ? ' data-nav-inplace="' + item.id + '"' : '') + '>',
+            '    <a class="' + cls + '" href="' + item.href + '">',
             svgIcon(ICONS[item.id] || ICON_FALLBACK),
             '      <span class="nav-text">' + item.label + '</span>',
             '    </a>'
@@ -378,14 +377,6 @@
 
     container.innerHTML = html.join('\n');
     bindGroupToggles(container, savedState);
-    container.querySelectorAll('[data-nav-inplace]').forEach(function (item) {
-      item.addEventListener('click', function (event) {
-        if (typeof global.openIterationInline === 'function') {
-          event.preventDefault();
-          global.openIterationInline(item.getAttribute('data-nav-inplace'));
-        }
-      });
-    });
     bindCollapseChrome();
   }
 
